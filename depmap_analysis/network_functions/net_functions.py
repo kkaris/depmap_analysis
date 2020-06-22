@@ -17,6 +17,7 @@ from indra.assemblers.english import EnglishAssembler
 from indra.statements import Agent, get_statement_by_name
 from indra.assemblers.indranet import IndraNet
 from indra.databases import get_identifiers_url
+from indra.mechlinker import MechLinker
 from indra.assemblers.pybel import PybelAssembler
 from indra.assemblers.pybel.assembler import belgraph_to_signed_graph
 from indra.explanation.pathfinding import bfs_search
@@ -489,6 +490,14 @@ def _custom_pb_assembly(stmts_list=None):
         # Not a statement with a position attribute
         except AttributeError:
             filtered_stmts.append(st)
+
+    # Mechlinker
+    ml = MechLinker(stmts=filtered_stmts)
+    ml.gather_explicit_activities()
+    ml.reduce_activities()
+    ml.gather_modifications()
+    ml.reduce_modifications()
+    filtered_stmts = ml.statements
 
     # Assemble Pybel model
     logger.info('Assembling PyBEL model')
