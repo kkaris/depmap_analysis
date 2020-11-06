@@ -33,14 +33,16 @@ import multiprocessing as mp
 from time import time
 from typing import Union, List, Dict, Iterable
 from pathlib import Path
+from typing import List, Union, Tuple, Iterable
+from datetime import datetime
 from itertools import product
 from collections import defaultdict
-from datetime import datetime
 
 import numpy as np
 import pandas as pd
 import networkx as nx
 
+from indra.explanation.model_checker import PybelModelChecker
 from indra.util.multiprocessing_traceback import WrapException
 from indra_db.util.s3_path import S3Path
 from depmap_analysis.util.aws import get_s3_client
@@ -360,10 +362,10 @@ def main(indra_net, outname, graph_type, sd_range, random=False,
 
     Parameters
     ----------
-    indra_net : Union[nx.DiGraph, nx.MultiDiGraph]
+    indra_net : Union[nx.DiGraph, nx.MultiDiGraph, PybelModelChecker]
     outname : str
     graph_type : str
-    sd_range : Tuple[float, Union[float, None]]
+    sd_range : Tuple[Union[float, None]]
     random : bool
     z_score : Union[pd.DataFrame, str]
     z_score_file : str
@@ -382,10 +384,10 @@ def main(indra_net, outname, graph_type, sd_range, random=False,
     immediate_only : bool
         Only look for immediate parents. This option might limit the number
         of results that are returned.
-    allowed_ns : List
+    allowed_ns : List[str]
         A list of allowed name spaces for explanations involving
         intermediary nodes. Default: Any namespace.
-    info : dict
+    info : Dict
     indra_date : str
     indra_net_file : str
     depmap_date : str
