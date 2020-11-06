@@ -1,7 +1,7 @@
 """Explainer and helper functions for depmap_script2.py When adding new
 explanation functions, please also add them to the mapping at the end"""
 import logging
-import networkx as nx
+from pybel.dsl import BaseEntity, ComplexAbundance, Reaction
 from typing import Set, Union, Tuple
 
 import pandas as pd
@@ -133,7 +133,7 @@ def get_st(s, o, corr, net, _type, **kwargs):
 
 
 def get_sd(s, o, corr, net, _type, **kwargs):
-    def get_nnn_set(n: str, g: nx.MultiDiGraph, signed: bool) \
+    def get_nnn_set(n: str, g: MultiDiGraph, signed: bool) \
             -> Set[Union[str, Tuple[str, str]]]:
         n_x_set = set()
         for x in g.succ[n]:
@@ -224,7 +224,7 @@ def _get_signed_interm(s, o, corr, sign_edge_net, x_set):
 
 
 def _get_signed_deep_interm(
-        s: str, o: str, corr: float, sign_edge_net: nx.MultiDiGraph,
+        s: str, o: str, corr: float, sign_edge_net: MultiDiGraph,
         xy_set: Set[Tuple[str, str]], union: bool) -> Set[str]:
     # Make sure we have the right sign type
     path_sign = INT_PLUS if corr >= 0 else INT_MINUS
@@ -280,7 +280,7 @@ def get_ns_id(subj, obj, net):
         The subject node
     obj : str
         The source node
-    net : nx.Graph
+    net : Graph
         A networkx graph object that at least contains node entries.
 
     Returns
@@ -321,16 +321,27 @@ def get_ns_id_pybel_node(hgnc_sym, node):
                        'symbol')
         return None, None
     # If PyBEL node, check name match, return if match, else None tuple
-    elif isinstance(node, CentralDogma):
-        if node.name == hgnc_sym:
-            try:
-                return node.namespace, node.identifier
-            except AttributeError:
+    elif isinstance(node, BaseEntity):
+        try:
+            name, ns = _get_pb_name_ns(node)
+            if name == hgnc_sym:
+                return ns, name
+            else:
                 return None, None
+        except AttributeError:
+            return None, None
     # Not recognized
     else:
         logger.warning(f'Type {node.__class__} not recognized')
         return None, None
+
+
+def _get_pb_name_ns(pbn: BaseEntity) -> Tuple[str, str]:
+    if isinstance(pbn, ComplexAbundance):
+        return _get_pb_name_ns(pbn.members[0])
+    if isinstance(pbn, Reaction):
+        return _get_pb_name_ns(pbn.products[0])
+    return pbn.name, pbn.namespace
 
 
 def normalize_corr_names(corr_m: pd.DataFrame,
