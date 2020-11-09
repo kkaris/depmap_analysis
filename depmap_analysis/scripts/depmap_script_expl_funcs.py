@@ -364,6 +364,49 @@ def _get_pb_name_ns(pbn: BaseEntity) -> Tuple[str, str]:
     return pbn.name, pbn.namespace
 
 
+def get_pb_paths(a: str, a_ns: str, a_id: str, b: str, b_ns: str,
+                 b_id: str, pbmc: PybelModelChecker, max_path_len: int,
+                 pybel_stmt_types: List[Statement] = None) \
+        -> Tuple[List[Tuple[str, int]], List[Tuple[str, int]]]:
+    """Given HGNC symbols a & b, find paths using the provided model checker
+
+    The paths are directed paths of a->b or a->x->b
+
+    Parameters
+    ----------
+    a : str
+    a_ns : str
+    a_id : str
+    b: str
+    b_ns: str
+    b_id: str
+    pbmc : PybelModelChecker
+        The PyBelModelChecker used to find paths between a and b
+    pybel_stmt_types : List
+
+    Returns
+    -------
+
+    """
+    pybel_stmt_types = pb_stmt_types if pybel_stmt_types is None else \
+        pybel_stmt_types
+    one_edge_results = set()
+    two_edge_results = set()
+    for StmtClass in pybel_stmt_types:
+        stmt = StmtClass(Agent(a, db_refs={a_ns: a_id}),
+                         Agent(b, db_refs={b_ns: b_id}))
+        mc_res = pbmc.check_statement(stmt=stmt, max_paths=10000,
+                                      max_path_length=max_path_len)
+        if mc_res.path_found:
+            for p in mc_res.paths:
+                if len(p) == 2:
+                    one_edge_results.add((StmtClass.__name__, *p))
+                elif len(p) == 3:
+                    two_edge_results.add((StmtClass.__name__, *p))
+
+    return list(one_edge_results), list(two_edge_results)
+
+
 def normalize_corr_names(corr_m: pd.DataFrame,
                          graph: Union[DiGraph, MultiDiGraph],
                          ns: str = None) -> pd.DataFrame:
