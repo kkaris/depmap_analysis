@@ -9,8 +9,9 @@ from pybel.dsl import CentralDogma
 from typing import Set, Tuple, Dict, List, ClassVar, Union, Iterable
 
 from indra.explanation.model_checker import PybelModelChecker
-from indra.statements import Statement, Modification, RegulateAmount, \
-    RegulateActivity, get_all_descendants, Agent
+from indra.statements import Statement, RegulateAmount, \
+    RegulateActivity, get_all_descendants, Agent, AddModification,\
+    RemoveModification
 from depmap_analysis.network_functions.famplex_functions import common_parent
 from depmap_analysis.network_functions.net_functions import gilda_normalization, \
     INT_PLUS, INT_MINUS
@@ -22,7 +23,7 @@ __all__ = ['explained', 'expl_ab', 'expl_ba', 'expl_axb', 'expl_bxa',
            'funcname_to_colname']
 
 
-def _issubclass_excl(Cls: ClassVar, ClsOther: Union[Iterable, ClassVar]) \
+def _issubclass_excl(Cls: Statement, ClsOther: Union[Iterable, Statement]) \
         -> bool:
     try:
         return any(_issubclass_excl(Cls, CO) for CO in ClsOther)
@@ -30,9 +31,10 @@ def _issubclass_excl(Cls: ClassVar, ClsOther: Union[Iterable, ClassVar]) \
         return issubclass(Cls, ClsOther) and Cls.__name__ != ClsOther.__name__
 
 
-_allowed_stmt_types = (Modification, RegulateAmount, RegulateActivity)
-pybel_stmt_types = [StmtCls for StmtCls in get_all_descendants(Statement)
-                    if _issubclass_excl(StmtCls, _allowed_stmt_types)]
+_allowed_stmt_types = (AddModification, RemoveModification, RegulateAmount,
+                       RegulateActivity)
+pb_stmt_types = [StmtCls for StmtCls in get_all_descendants(Statement)
+                 if _issubclass_excl(StmtCls, _allowed_stmt_types)]
 
 
 logger = logging.getLogger(__name__)
