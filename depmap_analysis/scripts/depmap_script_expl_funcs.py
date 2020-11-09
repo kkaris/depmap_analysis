@@ -2,12 +2,15 @@
 explanation functions, please also add them to the mapping at the end"""
 import logging
 from pybel.dsl import BaseEntity, ComplexAbundance, Reaction
-from typing import Set, Union, Tuple
 
 import pandas as pd
 from networkx import DiGraph, MultiDiGraph
 from pybel.dsl import CentralDogma
+from typing import Set, Tuple, Dict, List, ClassVar, Union, Iterable
 
+from indra.explanation.model_checker import PybelModelChecker
+from indra.statements import Statement, Modification, RegulateAmount, \
+    RegulateActivity, get_all_descendants, Agent
 from depmap_analysis.network_functions.famplex_functions import common_parent
 from depmap_analysis.network_functions.net_functions import gilda_normalization, \
     INT_PLUS, INT_MINUS
@@ -17,6 +20,21 @@ __all__ = ['explained', 'expl_ab', 'expl_ba', 'expl_axb', 'expl_bxa',
            'find_cp', 'get_sd', 'get_sr', 'get_st', 'get_ns_id_pybel_node',
            'get_ns_id', 'normalize_corr_names', 'expl_functions',
            'funcname_to_colname']
+
+
+def _issubclass_excl(Cls: ClassVar, ClsOther: Union[Iterable, ClassVar]) \
+        -> bool:
+    if isinstance(ClsOther, (tuple, list, set)):
+        return any(_issubclass_excl(Cls, CO) for CO in ClsOther)
+    else:
+        return issubclass(Cls, ClsOther) and Cls.__name__ != ClsOther.__name__
+
+
+_allowed_stmt_types = (Modification, RegulateAmount, RegulateActivity)
+pybel_stmt_types = [StmtCls for StmtCls in get_all_descendants(Statement)
+                    if _issubclass_excl(StmtCls, _allowed_stmt_types)]
+
+
 logger = logging.getLogger(__name__)
 
 
