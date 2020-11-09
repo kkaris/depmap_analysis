@@ -24,9 +24,9 @@ __all__ = ['explained', 'expl_ab', 'expl_ba', 'expl_axb', 'expl_bxa',
 
 def _issubclass_excl(Cls: ClassVar, ClsOther: Union[Iterable, ClassVar]) \
         -> bool:
-    if isinstance(ClsOther, (tuple, list, set)):
+    try:
         return any(_issubclass_excl(Cls, CO) for CO in ClsOther)
-    else:
+    except TypeError:
         return issubclass(Cls, ClsOther) and Cls.__name__ != ClsOther.__name__
 
 
