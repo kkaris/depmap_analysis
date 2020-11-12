@@ -6,12 +6,15 @@ from pybel.dsl import BaseEntity, ComplexAbundance, Reaction
 import pandas as pd
 from networkx import DiGraph, MultiDiGraph
 from pybel.dsl import CentralDogma
-from typing import Set, Tuple, Dict, List, ClassVar, Union, Iterable
+from typing import Tuple, Dict, List, ClassVar, Union, Iterable, Optional, Set
 
+from indra.ontology.standardize import standardize_agent_name
 from indra.explanation.model_checker import PybelModelChecker
+from indra.explanation.pathfinding import bfs_search_multiple_nodes
 from indra.statements import Statement, RegulateAmount, \
     RegulateActivity, get_all_descendants, Agent, AddModification,\
     RemoveModification
+from emmaa.queries import OpenSearchQuery
 from depmap_analysis.network_functions.famplex_functions import common_parent
 from depmap_analysis.network_functions.net_functions import gilda_normalization, \
     INT_PLUS, INT_MINUS
@@ -384,6 +387,7 @@ def get_pb_paths(a: str, a_ns: str, a_id: str, b: str, b_ns: str,
     pbmc : PybelModelChecker
         The PyBelModelChecker used to find paths between a and b
     pybel_stmt_types : List
+    max_path_len : Optional[int]
 
     Returns
     -------
@@ -406,6 +410,98 @@ def get_pb_paths(a: str, a_ns: str, a_id: str, b: str, b_ns: str,
                     two_edge_results.add((StmtClass.__name__, *p))
 
     return list(one_edge_results), list(two_edge_results)
+
+
+def get_shared_target_pb(a: str, a_ns: str, a_id: str, b: str, b_ns: str,
+                         b_id: str, pbmc: PybelModelChecker, corr: float,
+                         pybel_stmt_types: List[Statement] = None) \
+        -> List[Tuple[Tuple[BaseEntity, int]]]:
+    """
+
+    Parameters
+    ----------
+    a : str
+    a_ns : str
+    a_id : str
+    b : str
+    b_ns : str
+    b_id : str
+    pbmc : PybelModelChecker
+    corr : float
+    pybel_stmt_types : List[Statement]
+
+    Returns
+    -------
+
+    """
+    pybel_stmt_types = pb_stmt_names if pybel_stmt_types is None else \
+        pybel_stmt_types
+    a_succ_pos = set()
+    a_succ_neg = set()
+    b_succ_pos = set()
+    b_succ_neg = set()
+    corr_sign = 0 if corr > 0 else 1
+    pos, neg = 0, 1
+    for stmt_type in pybel_stmt_types:
+        # Do query for a
+        ag_a = Agent(a, db_refs={a_ns: a_id})
+        standardize_agent_name(ag_a)
+        query_a = OpenSearchQuery(ag_a, stmt_type, 'subject', ['HGNC'])
+        # Get both signs
+        a_succ_pos.update(_get_neigh(query_a, pbmc, False, sign=pos))
+        a_succ_neg.update(_get_neigh(query_a, pbmc, False, sign=neg))
+
+        # Do query for b
+        ag_b = Agent(b, db_refs={b_ns: b_id})
+        standardize_agent_name(ag_b)
+        query_b = OpenSearchQuery(ag_b, stmt_type, 'subject', ['HGNC'])
+        b_succ_pos.update(_get_neigh(query_b, pbmc, False, sign=pos))
+        b_succ_neg.update(_get_neigh(query_b, pbmc, False, sign=neg))
+
+        # todo: break loop early if we have have results?
+
+    # Match up results with sign
+    succ1, succ2 = set(), set()
+    if corr_sign == pos:
+        if a_succ_pos and b_succ_pos or a_succ_neg and b_succ_neg:
+            succ1 = a_succ_pos & b_succ_pos
+            succ2 = a_succ_neg & b_succ_neg
+    else:
+        if a_succ_pos and b_succ_neg or a_succ_neg and b_succ_pos:
+            succ1 = a_succ_pos & b_succ_neg
+            succ2 = a_succ_neg & b_succ_pos
+    shared_targets = succ1 | succ2
+    return list(shared_targets)
+
+
+def _get_neigh(query: OpenSearchQuery, pbmc: PybelModelChecker, reverse: bool,
+               sign: int) -> Set[Tuple[Tuple[BaseEntity, int]]]:
+    """
+
+    Parameters
+    ----------
+    query :  OpenSearchQuery
+    pbmc : PybelModelChecker
+    reverse : bool
+        True if upstream, False if downstream
+    sign : int
+        The target sign of the search
+
+    Returns
+    -------
+    List[Tuple[Tuple[BaseEntity, int]]]
+    """
+    # Do open search query
+    subj_nodes, obj_nodes, res_code = pbmc.get_all_subjects_objects(
+        stmt=query.path_stmt)
+    nodes = obj_nodes if reverse else subj_nodes
+    if nodes:
+        path_gen = bfs_search_multiple_nodes(
+            g=pbmc.get_graph(), source_nodes=nodes, reverse=reverse, sign=sign,
+            depth_limit=1)
+        return {p for p in path_gen}
+    else:
+        return set()
 
 
 def normalize_corr_names(corr_m: pd.DataFrame,
