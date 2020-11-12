@@ -33,8 +33,9 @@ def _issubclass_excl(Cls: Statement, ClsOther: Union[Iterable, Statement]) \
 
 _allowed_stmt_types = (AddModification, RemoveModification, RegulateAmount,
                        RegulateActivity)
-pb_stmt_types = [StmtCls for StmtCls in get_all_descendants(Statement)
-                 if _issubclass_excl(StmtCls, _allowed_stmt_types)]
+pb_stmt_classes = [StmtCls for StmtCls in get_all_descendants(Statement)
+                   if _issubclass_excl(StmtCls, _allowed_stmt_types)]
+pb_stmt_names = [cls.__name__ for cls in pb_stmt_classes]
 
 
 logger = logging.getLogger(__name__)
@@ -388,7 +389,7 @@ def get_pb_paths(a: str, a_ns: str, a_id: str, b: str, b_ns: str,
     -------
 
     """
-    pybel_stmt_types = pb_stmt_types if pybel_stmt_types is None else \
+    pybel_stmt_types = pb_stmt_classes if pybel_stmt_types is None else \
         pybel_stmt_types
     one_edge_results = set()
     two_edge_results = set()
