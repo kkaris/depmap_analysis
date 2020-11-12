@@ -412,9 +412,10 @@ def get_pb_paths(a: str, a_ns: str, a_id: str, b: str, b_ns: str,
     return list(one_edge_results), list(two_edge_results)
 
 
-def get_shared_target_pb(a: str, a_ns: str, a_id: str, b: str, b_ns: str,
-                         b_id: str, pbmc: PybelModelChecker, corr: float,
-                         pybel_stmt_types: List[Statement] = None) \
+def get_shared_interactors_pb(
+        a: str, a_ns: str, a_id: str, b: str, b_ns: str, b_id: str,
+        pbmc: PybelModelChecker, corr: float, reverse: bool,
+        pybel_stmt_types: List[Statement] = None) \
         -> List[Tuple[Tuple[BaseEntity, int]]]:
     """
 
@@ -428,6 +429,8 @@ def get_shared_target_pb(a: str, a_ns: str, a_id: str, b: str, b_ns: str,
     b_id : str
     pbmc : PybelModelChecker
     corr : float
+    reverse : bool
+        True if upstream, False if downstream
     pybel_stmt_types : List[Statement]
 
     Returns
@@ -436,10 +439,10 @@ def get_shared_target_pb(a: str, a_ns: str, a_id: str, b: str, b_ns: str,
     """
     pybel_stmt_types = pb_stmt_names if pybel_stmt_types is None else \
         pybel_stmt_types
-    a_succ_pos = set()
-    a_succ_neg = set()
-    b_succ_pos = set()
-    b_succ_neg = set()
+    a_pos = set()
+    a_neg = set()
+    b_pos = set()
+    b_neg = set()
     corr_sign = 0 if corr > 0 else 1
     pos, neg = 0, 1
     for stmt_type in pybel_stmt_types:
@@ -448,29 +451,29 @@ def get_shared_target_pb(a: str, a_ns: str, a_id: str, b: str, b_ns: str,
         standardize_agent_name(ag_a)
         query_a = OpenSearchQuery(ag_a, stmt_type, 'subject', ['HGNC'])
         # Get both signs
-        a_succ_pos.update(_get_neigh(query_a, pbmc, False, sign=pos))
-        a_succ_neg.update(_get_neigh(query_a, pbmc, False, sign=neg))
+        a_pos.update(_get_neigh(query_a, pbmc, reverse, sign=pos))
+        a_neg.update(_get_neigh(query_a, pbmc, reverse, sign=neg))
 
         # Do query for b
         ag_b = Agent(b, db_refs={b_ns: b_id})
         standardize_agent_name(ag_b)
         query_b = OpenSearchQuery(ag_b, stmt_type, 'subject', ['HGNC'])
-        b_succ_pos.update(_get_neigh(query_b, pbmc, False, sign=pos))
-        b_succ_neg.update(_get_neigh(query_b, pbmc, False, sign=neg))
+        b_pos.update(_get_neigh(query_b, pbmc, reverse, sign=pos))
+        b_neg.update(_get_neigh(query_b, pbmc, reverse, sign=neg))
 
         # todo: break loop early if we have have results?
 
     # Match up results with sign
-    succ1, succ2 = set(), set()
+    nodes1, nodes2 = set(), set()
     if corr_sign == pos:
-        if a_succ_pos and b_succ_pos or a_succ_neg and b_succ_neg:
-            succ1 = a_succ_pos & b_succ_pos
-            succ2 = a_succ_neg & b_succ_neg
+        if a_pos and b_pos or a_neg and b_neg:
+            nodes1 = a_pos & b_pos
+            nodes2 = a_neg & b_neg
     else:
-        if a_succ_pos and b_succ_neg or a_succ_neg and b_succ_pos:
-            succ1 = a_succ_pos & b_succ_neg
-            succ2 = a_succ_neg & b_succ_pos
-    shared_targets = succ1 | succ2
+        if a_pos and b_neg or a_neg and b_pos:
+            nodes1 = a_pos & b_neg
+            nodes2 = a_neg & b_pos
+    shared_targets = nodes1 | nodes2
     return list(shared_targets)
 
 
