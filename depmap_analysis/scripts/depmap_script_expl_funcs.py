@@ -104,16 +104,27 @@ def find_cp(s, o, corr, net, _type, **kwargs):
 
 @expl_func
 def expl_axb(s, o, corr, net, _type, **kwargs):
-    x_set = set(net.succ[s]) & set(net.pred[o])
-    if _type in {'signed', 'pybel'}:
-        x_nodes = _get_signed_interm(s, o, corr, net, x_set)
+    if _type in {'signed', 'unsigned'}:
+        x_set = set(net.succ[s]) & set(net.pred[o])
+        x_nodes = _get_signed_interm(s, o, corr, net, x_set) \
+            if _type == 'signed' else x_set
+    elif _type == 'pybel':
+        # Here, x_nodes is a tuple of (one_edge_paths, two_edge_paths)
+        x_nodes = get_pb_paths(pbmc=net, max_path_len=3, **kwargs)
     else:
-        x_nodes = x_set
+        raise ValueError(f'Unhandled type {_type}')
 
     # Filter ns
     if kwargs.get('ns_set'):
-        x_nodes = {x for x in x_nodes if
-                   net.nodes[x]['ns'].lower() in kwargs['ns_set']} or None
+        if _type == 'pybel':
+            # Only check the two edge paths
+            oe, te = x_nodes
+            te = [p for p in te if get_ns_id_pybel_node(p[1])[0].lower()
+                  in kwargs['ns_set']]
+            x_nodes = oe, te
+        else:
+            x_nodes = {x for x in x_nodes if net.nodes[x]['ns'].lower() in
+                       kwargs['ns_set']} or None
 
     if x_nodes:
         return s, o, list(x_nodes)
