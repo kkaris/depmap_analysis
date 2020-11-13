@@ -363,7 +363,8 @@ def get_ns_id(subj, obj, net):
     return s_ns, s_id, o_ns, o_id
 
 
-def get_ns_id_pybel_node(node: BaseEntity, hgnc_sym: str = None):
+def get_ns_id_pybel_node(node: Union[BaseEntity, Tuple[BaseEntity]],
+                         hgnc_sym: str = None):
     """
 
     Parameters
@@ -459,7 +460,7 @@ def get_shared_interactors_pb(
         s_name: str, s_ns: str, s_id: str, o_name: str, o_ns: str, o_id: str,
         pbmc: PybelModelChecker, corr: float, reverse: bool,
         pybel_stmt_types: List[Statement] = None) \
-        -> List[Tuple[Tuple[BaseEntity, int]]]:
+        -> Set[Tuple[Tuple[BaseEntity, int]]]:
     """
 
     Parameters
@@ -521,7 +522,7 @@ def get_shared_interactors_pb(
 
 
 def _get_neigh(query: OpenSearchQuery, pbmc: PybelModelChecker, reverse: bool,
-               sign: int) -> Set[Tuple[Tuple[BaseEntity, int]]]:
+               sign: int) -> Set[Tuple[BaseEntity]]:
     """
 
     Parameters
