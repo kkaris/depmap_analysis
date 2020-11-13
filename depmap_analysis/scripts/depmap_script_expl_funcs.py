@@ -390,7 +390,7 @@ def get_ns_id_pybel_node(node: BaseEntity, hgnc_sym: str = None):
     # If PyBEL node, check name match, return if match, else None tuple
     elif isinstance(node, BaseEntity):
         try:
-            name, ns = _get_pb_name_ns(node)
+            ns, name = _get_pb_name_ns(node)
             if name == hgnc_sym:
                 return ns, name
             else:
@@ -403,18 +403,12 @@ def get_ns_id_pybel_node(node: BaseEntity, hgnc_sym: str = None):
         return None, None
 
 
-def _get_pb_name_ns(pbn: BaseEntity) -> Tuple[Union[str, None],
-                                              Union[str, None]]:
+def _get_pb_name_ns(pbn: BaseEntity) -> Tuple[str, str]:
     if isinstance(pbn, ComplexAbundance):
         return _get_pb_name_ns(pbn.members[0])
     if isinstance(pbn, Reaction):
         return _get_pb_name_ns(pbn.products[0])
-    try:
-        return pbn.name, pbn.namespace
-    except AttributeError:
-        logger.warning(f'Cannot extract name and name space from PyBEL node'
-                       f' {pbn}')
-        return None, None
+    return pbn.namespace, pbn.name
 
 
 def get_pb_paths(s_name: str, s_ns: str, s_id: str, o_name: str, o_ns: str,
