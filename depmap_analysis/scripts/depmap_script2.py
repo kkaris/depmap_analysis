@@ -155,7 +155,11 @@ def _match_correlation_body(corr_iter, expl_types, stats_columns,
             # Add hgnc symbol name to expl kwargs if pybel
             if _type == 'pybel':
                 options['s_name'] = gA
+                options['s_ns'] = a_ns
+                options['s_id'] = a_id
                 options['o_name'] = gB
+                options['o_ns'] = b_ns
+                options['o_id'] = b_id
 
             expl_iterations = defaultdict(list)
             for A, B in expl_iter:
