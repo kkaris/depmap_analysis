@@ -371,7 +371,7 @@ def _get_pb_name_ns(pbn: BaseEntity) -> Tuple[str, str]:
 def get_pb_paths(a: str, a_ns: str, a_id: str, b: str, b_ns: str,
                  b_id: str, pbmc: PybelModelChecker, max_path_len: int,
                  pybel_stmt_types: List[Statement] = None) \
-        -> Tuple[List[Tuple[str, int]], List[Tuple[str, int]]]:
+        -> Tuple[List[List[BaseEntity]], List[List[BaseEntity]]]:
     """Given HGNC symbols a & b, find paths using the provided model checker
 
     The paths are directed paths of a->b or a->x->b
@@ -403,11 +403,11 @@ def get_pb_paths(a: str, a_ns: str, a_id: str, b: str, b_ns: str,
         mc_res = pbmc.check_statement(stmt=stmt, max_paths=10000,
                                       max_path_length=max_path_len)
         if mc_res.path_found:
-            for p in mc_res.paths:
-                if len(p) == 2:
-                    one_edge_results.add((StmtClass.__name__, *p))
-                elif len(p) == 3:
-                    two_edge_results.add((StmtClass.__name__, *p))
+            for path in mc_res.paths:
+                if len(path) == 2:
+                    one_edge_results.add([p[0] for p in path])
+                elif len(path) == 3:
+                    two_edge_results.add([p[0] for p in path])
 
     return list(one_edge_results), list(two_edge_results)
 
