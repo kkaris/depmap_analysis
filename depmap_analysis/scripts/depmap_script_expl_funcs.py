@@ -135,14 +135,7 @@ def expl_axb(s, o, corr, net, _type, **kwargs):
 @expl_func
 def expl_bxa(s, o, corr, net, _type, **kwargs):
     if _type == 'pybel':
-        options = {
-            'o_name': kwargs.pop('s_name'),
-            'o_ns': kwargs.pop('s_ns'),
-            'o_id': kwargs.pop('s_id'),
-            's_name': kwargs.pop('o_name'),
-            's_ns': kwargs.pop('o_ns'),
-            's_id': kwargs.pop('o_id')
-        }
+        options = _flip_options(**kwargs)
     else:
         options = {}
     return expl_axb(o, s, corr, net, _type, **kwargs, **options)
@@ -253,12 +246,22 @@ def expl_ab(s, o, corr, net, _type, **kwargs):
 @expl_func
 def expl_ba(s, o, corr, net, _type, **kwargs):
     if _type == 'pybel':
-        s_name = kwargs.pop('s_name')
-        o_name = kwargs.pop('o_name')
-        options = {'o_name': s_name, 's_name': o_name}
+        options = _flip_options(**kwargs)
     else:
         options = {}
     return expl_ab(o, s, corr, net, _type, **kwargs, **options)
+
+
+def _flip_options(**kwargs):
+    options = {
+        'o_name': kwargs.pop('s_name'),
+        'o_ns': kwargs.pop('s_ns'),
+        'o_id': kwargs.pop('s_id'),
+        's_name': kwargs.pop('o_name'),
+        's_ns': kwargs.pop('o_ns'),
+        's_id': kwargs.pop('o_id')
+    }
+    return options
 
 
 def get_edge_statements(s, o, corr, net, _type, **kwargs):
