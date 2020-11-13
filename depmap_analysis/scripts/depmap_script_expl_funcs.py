@@ -493,7 +493,7 @@ def get_shared_interactors_pb(
         # Do query for a
         ag_a = Agent(s_name, db_refs={s_ns: s_id})
         standardize_agent_name(ag_a)
-        query_a = OpenSearchQuery(ag_a, stmt_type, 'subject', ['HGNC'])
+        query_a = OpenSearchQuery(ag_a, stmt_type, 'subject', ['HGNC', 'FPLX'])
         # Get both signs
         a_pos.update(_get_neigh(query_a, pbmc, reverse, sign=pos))
         a_neg.update(_get_neigh(query_a, pbmc, reverse, sign=neg))
@@ -501,11 +501,11 @@ def get_shared_interactors_pb(
         # Do query for b
         ag_b = Agent(o_name, db_refs={o_ns: o_id})
         standardize_agent_name(ag_b)
-        query_b = OpenSearchQuery(ag_b, stmt_type, 'subject', ['HGNC'])
+        query_b = OpenSearchQuery(ag_b, stmt_type, 'subject', ['HGNC', 'FPLX'])
         b_pos.update(_get_neigh(query_b, pbmc, reverse, sign=pos))
         b_neg.update(_get_neigh(query_b, pbmc, reverse, sign=neg))
 
-        # todo: break loop early if we have have results?
+        # todo: break loop early if we have results?
 
     # Match up results with sign
     nodes1, nodes2 = set(), set()
@@ -517,8 +517,8 @@ def get_shared_interactors_pb(
         if a_pos and b_neg or a_neg and b_pos:
             nodes1 = a_pos & b_neg
             nodes2 = a_neg & b_pos
-    shared_targets = nodes1 | nodes2
-    return list(shared_targets)
+    shared_interactors = nodes1 | nodes2
+    return shared_interactors
 
 
 def _get_neigh(query: OpenSearchQuery, pbmc: PybelModelChecker, reverse: bool,
