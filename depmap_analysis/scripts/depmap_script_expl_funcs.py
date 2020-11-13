@@ -124,9 +124,14 @@ def expl_axb(s, o, corr, net, _type, **kwargs):
 @expl_func
 def expl_bxa(s, o, corr, net, _type, **kwargs):
     if _type == 'pybel':
-        s_name = kwargs.pop('s_name')
-        o_name = kwargs.pop('o_name')
-        options = {'o_name': s_name, 's_name': o_name}
+        options = {
+            'o_name': kwargs.pop('s_name'),
+            'o_ns': kwargs.pop('s_ns'),
+            'o_id': kwargs.pop('s_id'),
+            's_name': kwargs.pop('o_name'),
+            's_ns': kwargs.pop('o_ns'),
+            's_id': kwargs.pop('o_id')
+        }
     else:
         options = {}
     return expl_axb(o, s, corr, net, _type, **kwargs, **options)
@@ -401,8 +406,8 @@ def _get_pb_name_ns(pbn: BaseEntity) -> Tuple[Union[str, None],
         return None, None
 
 
-def get_pb_paths(a: str, a_ns: str, a_id: str, b: str, b_ns: str,
-                 b_id: str, pbmc: PybelModelChecker, max_path_len: int,
+def get_pb_paths(s_name: str, s_ns: str, s_id: str, o_name: str, o_ns: str,
+                 o_id: str, pbmc: PybelModelChecker, max_path_len: int,
                  pybel_stmt_types: List[Statement] = None) \
         -> Tuple[List[List[BaseEntity]], List[List[BaseEntity]]]:
     """Given HGNC symbols a & b, find paths using the provided model checker
@@ -411,12 +416,12 @@ def get_pb_paths(a: str, a_ns: str, a_id: str, b: str, b_ns: str,
 
     Parameters
     ----------
-    a : str
-    a_ns : str
-    a_id : str
-    b: str
-    b_ns: str
-    b_id: str
+    s_name : str
+    s_ns : str
+    s_id : str
+    o_name : str
+    o_ns : str
+    o_id : str
     pbmc : PybelModelChecker
         The PyBelModelChecker used to find paths between a and b
     pybel_stmt_types : List
@@ -431,8 +436,8 @@ def get_pb_paths(a: str, a_ns: str, a_id: str, b: str, b_ns: str,
     one_edge_results = set()
     two_edge_results = set()
     for StmtClass in pybel_stmt_types:
-        stmt = StmtClass(Agent(a, db_refs={a_ns: a_id}),
-                         Agent(b, db_refs={b_ns: b_id}))
+        stmt = StmtClass(Agent(s_name, db_refs={s_ns: s_id}),
+                         Agent(o_name, db_refs={o_ns: o_id}))
         mc_res = pbmc.check_statement(stmt=stmt, max_paths=10000,
                                       max_path_length=max_path_len)
         if mc_res.path_found:
@@ -446,7 +451,7 @@ def get_pb_paths(a: str, a_ns: str, a_id: str, b: str, b_ns: str,
 
 
 def get_shared_interactors_pb(
-        a: str, a_ns: str, a_id: str, b: str, b_ns: str, b_id: str,
+        s_name: str, s_ns: str, s_id: str, o_name: str, o_ns: str, o_id: str,
         pbmc: PybelModelChecker, corr: float, reverse: bool,
         pybel_stmt_types: List[Statement] = None) \
         -> List[Tuple[Tuple[BaseEntity, int]]]:
@@ -454,12 +459,12 @@ def get_shared_interactors_pb(
 
     Parameters
     ----------
-    a : str
-    a_ns : str
-    a_id : str
-    b : str
-    b_ns : str
-    b_id : str
+    s_name : str
+    s_ns : str
+    s_id : str
+    o_name : str
+    o_ns : str
+    o_id : str
     pbmc : PybelModelChecker
     corr : float
     reverse : bool
@@ -476,11 +481,11 @@ def get_shared_interactors_pb(
     a_neg = set()
     b_pos = set()
     b_neg = set()
-    corr_sign = 0 if corr > 0 else 1
     pos, neg = 0, 1
+    corr_sign = pos if corr > 0 else neg
     for stmt_type in pybel_stmt_types:
         # Do query for a
-        ag_a = Agent(a, db_refs={a_ns: a_id})
+        ag_a = Agent(s_name, db_refs={s_ns: s_id})
         standardize_agent_name(ag_a)
         query_a = OpenSearchQuery(ag_a, stmt_type, 'subject', ['HGNC'])
         # Get both signs
@@ -488,7 +493,7 @@ def get_shared_interactors_pb(
         a_neg.update(_get_neigh(query_a, pbmc, reverse, sign=neg))
 
         # Do query for b
-        ag_b = Agent(b, db_refs={b_ns: b_id})
+        ag_b = Agent(o_name, db_refs={o_ns: o_id})
         standardize_agent_name(ag_b)
         query_b = OpenSearchQuery(ag_b, stmt_type, 'subject', ['HGNC'])
         b_pos.update(_get_neigh(query_b, pbmc, reverse, sign=pos))
