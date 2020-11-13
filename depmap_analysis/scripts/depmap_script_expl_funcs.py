@@ -135,15 +135,18 @@ def expl_bxa(s, o, corr, net, _type, **kwargs):
 # Shared regulator: A<-X->B
 @expl_func
 def get_sr(s, o, corr, net, _type, **kwargs):
-    x_set = set(net.pred[s]) & set(net.pred[o])
-
-    if _type in {'signed', 'pybel'}:
-        x_nodes = _get_signed_interm(s, o, corr, net, x_set)
+    if _type in {'signed', 'unsigned'}:
+        x_set = set(net.pred[s]) & set(net.pred[o])
+        x_nodes = _get_signed_interm(s, o, corr, net, x_set) \
+            if _type == 'signed' else x_set
+    elif _type == 'pybel':
+        x_nodes = get_shared_interactors_pb(pbmc=net, corr=corr,
+                                            reverse=True, **kwargs)
     else:
-        x_nodes = x_set
+        raise ValueError(f'Unhandled type {_type}')
 
     # Filter ns
-    if kwargs.get('ns_set'):
+    if kwargs.get('ns_set') and _type != 'pybel':
         x_nodes = {x for x in x_nodes if
                    net.nodes[x]['ns'].lower() in kwargs['ns_set']} or None
 
@@ -156,15 +159,18 @@ def get_sr(s, o, corr, net, _type, **kwargs):
 # Shared target: A->X<-B
 @expl_func
 def get_st(s, o, corr, net, _type, **kwargs):
-    x_set = set(net.succ[s]) & set(net.succ[o])
-
-    if _type in {'signed', 'pybel'}:
-        x_nodes = _get_signed_interm(s, o, corr, net, x_set)
+    if _type in {'signed', 'unsigned'}:
+        x_set = set(net.succ[s]) & set(net.succ[o])
+        x_nodes = _get_signed_interm(s, o, corr, net, x_set) \
+            if _type == 'signed' else x_set
+    elif _type == 'pybel':
+        x_nodes = get_shared_interactors_pb(pbmc=net, corr=corr,
+                                            reverse=False, **kwargs)
     else:
-        x_nodes = x_set
+        raise ValueError(f'Unhandled type {_type}')
 
     # Filter ns
-    if kwargs.get('ns_set'):
+    if kwargs.get('ns_set') and _type != 'pybel':
         x_nodes = {x for x in x_nodes if
                    net.nodes[x]['ns'].lower() in kwargs['ns_set']} or None
 
