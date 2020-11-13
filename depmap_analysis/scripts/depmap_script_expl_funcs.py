@@ -1,11 +1,11 @@
 """Explainer and helper functions for depmap_script2.py When adding new
 explanation functions, please also add them to the mapping at the end"""
 import logging
+from functools import wraps
 from pybel.dsl import BaseEntity, ComplexAbundance, Reaction
 
 import pandas as pd
 from networkx import DiGraph, MultiDiGraph
-from pybel.dsl import CentralDogma
 from typing import Tuple, Dict, List, ClassVar, Union, Iterable, Optional, Set
 
 from indra.ontology.standardize import standardize_agent_name
@@ -24,6 +24,7 @@ __all__ = ['explained', 'expl_ab', 'expl_ba', 'expl_axb', 'expl_bxa',
            'find_cp', 'get_sd', 'get_sr', 'get_st', 'get_ns_id_pybel_node',
            'get_ns_id', 'normalize_corr_names', 'expl_functions',
            'funcname_to_colname']
+graph_types = {'unsigned', 'signed', 'pybel'}
 
 
 def _issubclass_excl(Cls: Statement, ClsOther: Union[Iterable, Statement]) \
@@ -44,11 +45,24 @@ pb_stmt_names = [cls.__name__ for cls in pb_stmt_classes]
 logger = logging.getLogger(__name__)
 
 
+def expl_func(ef):
+    @wraps(ef)
+    def decorator(*args, **kwargs):
+        _type = kwargs['_type']
+        if _type not in graph_types:
+            raise ValueError(f'Unknown graph type {_type}. Graph type must '
+                             f'be one of {", ".join(graph_types)}')
+        return ef(*args, **kwargs)
+    return decorator
+
+
+@expl_func
 def explained(s, o, corr, net, _type, **kwargs):
     # This function is used for a priori explained relationships
     return s, o, 'explained_set'
 
 
+@expl_func
 def find_cp(s, o, corr, net, _type, **kwargs):
     if _type == 'pybel':
         s_name = kwargs['s_name']
@@ -88,6 +102,7 @@ def find_cp(s, o, corr, net, _type, **kwargs):
     return s, o, None
 
 
+@expl_func
 def expl_axb(s, o, corr, net, _type, **kwargs):
     x_set = set(net.succ[s]) & set(net.pred[o])
     if _type in {'signed', 'pybel'}:
@@ -106,6 +121,7 @@ def expl_axb(s, o, corr, net, _type, **kwargs):
         return s, o, None
 
 
+@expl_func
 def expl_bxa(s, o, corr, net, _type, **kwargs):
     if _type == 'pybel':
         s_name = kwargs.pop('s_name')
@@ -117,6 +133,7 @@ def expl_bxa(s, o, corr, net, _type, **kwargs):
 
 
 # Shared regulator: A<-X->B
+@expl_func
 def get_sr(s, o, corr, net, _type, **kwargs):
     x_set = set(net.pred[s]) & set(net.pred[o])
 
@@ -137,6 +154,7 @@ def get_sr(s, o, corr, net, _type, **kwargs):
 
 
 # Shared target: A->X<-B
+@expl_func
 def get_st(s, o, corr, net, _type, **kwargs):
     x_set = set(net.succ[s]) & set(net.succ[o])
 
@@ -156,6 +174,7 @@ def get_st(s, o, corr, net, _type, **kwargs):
         return s, o, None
 
 
+@expl_func
 def get_sd(s, o, corr, net, _type, **kwargs):
     def get_nnn_set(n: str, g: MultiDiGraph, signed: bool) \
             -> Set[Union[str, Tuple[str, str]]]:
@@ -200,6 +219,7 @@ def get_sd(s, o, corr, net, _type, **kwargs):
         return s, o, None
 
 
+@expl_func
 def expl_ab(s, o, corr, net, _type, **kwargs):
     edge_dict = get_edge_statements(s, o, corr, net, _type, **kwargs)
     if edge_dict:
@@ -208,6 +228,7 @@ def expl_ab(s, o, corr, net, _type, **kwargs):
     return s, o, None
 
 
+@expl_func
 def expl_ba(s, o, corr, net, _type, **kwargs):
     if _type == 'pybel':
         s_name = kwargs.pop('s_name')
