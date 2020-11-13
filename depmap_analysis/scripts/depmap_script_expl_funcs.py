@@ -52,9 +52,9 @@ def explained(s, o, corr, net, _type, **kwargs):
 def find_cp(s, o, corr, net, _type, **kwargs):
     if _type == 'pybel':
         s_name = kwargs['s_name']
-        s_ns, s_id = get_ns_id_pybel_node(s_name, s)
+        s_ns, s_id = get_ns_id_pybel_node(hgnc_sym=s_name, node=s)
         o_name = kwargs['o_name']
-        o_ns, o_id = get_ns_id_pybel_node(o_name, o)
+        o_ns, o_id = get_ns_id_pybel_node(hgnc_sym=o_name, node=o)
     else:
         s_name = s
         o_name = o
@@ -320,14 +320,14 @@ def get_ns_id(subj, obj, net):
     return s_ns, s_id, o_ns, o_id
 
 
-def get_ns_id_pybel_node(hgnc_sym, node):
+def get_ns_id_pybel_node(node: BaseEntity, hgnc_sym: str = None):
     """
 
     Parameters
     ----------
     hgnc_sym : str
         Name to match
-    node : CentralDogma|tuple
+    node : Optional[Union[BaseEntity, Tuple]]
         PyBEL node or tuple of PyBEL nodes
 
     Returns
@@ -338,7 +338,7 @@ def get_ns_id_pybel_node(hgnc_sym, node):
     # If tuple of nodes, recursive call until match is found
     if isinstance(node, tuple):
         for n in node:
-            ns, _id = get_ns_id_pybel_node(hgnc_sym, n)
+            ns, _id = get_ns_id_pybel_node(n, hgnc_sym)
             if ns is not None:
                 return ns, _id
         logger.warning('None of the names in the tuple matched the HGNC '
@@ -360,12 +360,18 @@ def get_ns_id_pybel_node(hgnc_sym, node):
         return None, None
 
 
-def _get_pb_name_ns(pbn: BaseEntity) -> Tuple[str, str]:
+def _get_pb_name_ns(pbn: BaseEntity) -> Tuple[Union[str, None],
+                                              Union[str, None]]:
     if isinstance(pbn, ComplexAbundance):
         return _get_pb_name_ns(pbn.members[0])
     if isinstance(pbn, Reaction):
         return _get_pb_name_ns(pbn.products[0])
-    return pbn.name, pbn.namespace
+    try:
+        return pbn.name, pbn.namespace
+    except AttributeError:
+        logger.warning(f'Cannot extract name and name space from PyBEL node'
+                       f' {pbn}')
+        return None, None
 
 
 def get_pb_paths(a: str, a_ns: str, a_id: str, b: str, b_ns: str,

@@ -108,8 +108,12 @@ def _match_correlation_body(corr_iter, expl_types, stats_columns,
 
             if _type == 'pybel':
                 # Get ns, id
-                a_ns, a_id = get_ns_id_pybel_node(gA, tuple(hgnc_node_mapping[gA]))
-                b_ns, b_id = get_ns_id_pybel_node(gB, tuple(hgnc_node_mapping[gB]))
+                a_ns, a_id = get_ns_id_pybel_node(
+                    hgnc_sym=gA, node=tuple(hgnc_node_mapping[gA])
+                )
+                b_ns, b_id = get_ns_id_pybel_node(
+                    hgnc_sym=gB, node=tuple(hgnc_node_mapping[gB])
+                )
             else:
                 a_ns, a_id, b_ns, b_id = get_ns_id(gA, gB, indranet)
 
