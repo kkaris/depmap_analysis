@@ -546,7 +546,7 @@ def _get_neigh(query: OpenSearchQuery, pbmc: PybelModelChecker, reverse: bool,
         path_gen = bfs_search_multiple_nodes(
             g=pbmc.get_graph(), source_nodes=nodes, reverse=reverse, sign=sign,
             depth_limit=1)
-        return {p for p in path_gen}
+        return {tuple(n[0] for n in path) for path in path_gen}
     else:
         return set()
 
