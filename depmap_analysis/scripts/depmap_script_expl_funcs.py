@@ -133,8 +133,8 @@ def expl_bxa(s, o, corr, net, _type, **kwargs):
     if _type == 'pybel':
         options = _flip_options(**kwargs)
     else:
-        options = {}
-    return expl_axb(o, s, corr, net, _type, **kwargs, **options)
+        options = kwargs
+    return expl_axb(o, s, corr, net, _type, **options)
 
 
 # Shared regulator: A<-X->B
@@ -239,8 +239,8 @@ def expl_ba(s, o, corr, net, _type, **kwargs):
     if _type == 'pybel':
         options = _flip_options(**kwargs)
     else:
-        options = {}
-    return expl_ab(o, s, corr, net, _type, **kwargs, **options)
+        options = kwargs
+    return expl_ab(o, s, corr, net, _type, **options)
 
 
 def _flip_options(**kwargs):
@@ -252,6 +252,9 @@ def _flip_options(**kwargs):
         's_ns': kwargs.pop('o_ns'),
         's_id': kwargs.pop('o_id')
     }
+    for k, v in kwargs.items():
+        if k not in options:
+            options[k] = v
     return options
 
 
