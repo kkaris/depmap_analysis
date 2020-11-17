@@ -184,10 +184,6 @@ def _match_correlation_body(corr_iter, expl_types, stats_columns,
 
             pybel_res_cache = {}
             for expl_type, expl_func in expl_types.items():
-                # Todo:
-                #  - For pybel model checker, cache results from either
-                #    a-b or a-x-b searches for future use of the other
-                #    explanation
                 # Function signature: s, o, corr, net, graph_type, **kwargs
                 # Function should return what will be kept in the
                 # 'expl_data' column of the expl_df
@@ -199,7 +195,6 @@ def _match_correlation_body(corr_iter, expl_types, stats_columns,
                 # Some functions reverses A, B hence the s, o assignment
                 if _type == 'pybel':
                     # Check for cached results
-                    # Todo check if max_path_len should be == 2 or == 3
                     if expl_type in pybel_res_cache:
                         s, o, expl_data = pybel_res_cache[expl_type]
                     else:
@@ -264,7 +259,8 @@ def _match_correlation_body(corr_iter, expl_types, stats_columns,
         raise WrapException()
 
 
-def match_correlations(corr_z, sd_range, script_settings, **kwargs):
+def match_correlations(corr_z, sd_range, script_settings, **kwargs) \
+        -> DepMapExplainer:
     """The main loop for matching correlations with INDRA explanations
 
     Parameters
@@ -286,7 +282,7 @@ def match_correlations(corr_z, sd_range, script_settings, **kwargs):
 
     Returns
     -------
-    depmap_analysis.util.statistics.DepMapExplainer
+    DepMapExplainer
         An instance of the DepMapExplainer class containing the explanations
         for the correlations.
     """

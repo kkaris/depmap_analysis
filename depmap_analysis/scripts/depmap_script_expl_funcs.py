@@ -436,7 +436,7 @@ def get_pb_paths(s_name: str, s_ns: str, s_id: str, o_name: str, o_ns: str,
     pbmc : PybelModelChecker
         The PyBelModelChecker used to find paths between a and b
     pybel_stmt_types : List
-    max_path_len : Optional[int]
+    max_path_len : int
 
     Returns
     -------
