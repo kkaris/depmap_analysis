@@ -185,6 +185,7 @@ def get_st(s, o, corr, net, _type, **kwargs):
 
 
 def get_sd(s, o, corr, net, _type, **kwargs):
+    # todo add new pybel handling with model checker
     def get_nnn_set(n: str, g: MultiDiGraph, signed: bool) \
             -> Set[Union[str, Tuple[str, str]]]:
         n_x_set = set()
@@ -199,7 +200,7 @@ def get_sd(s, o, corr, net, _type, **kwargs):
                 n_x_set.update(g.succ[x])
         return n_x_set
 
-    # Get next-nearest-neighborhood for subject
+    # Get next-nearest-neighborhood for subject and object
     s_x_set = get_nnn_set(s, net, _type in {'signed', 'pybel'})
     o_x_set = get_nnn_set(o, net, _type in {'signed', 'pybel'})
 
