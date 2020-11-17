@@ -162,37 +162,53 @@ def _match_correlation_body(corr_iter, expl_types, stats_columns,
                 options['o_ns'] = b_ns
                 options['o_id'] = b_id
 
-            expl_iterations = defaultdict(list)
-            for A, B in expl_iter:
-                # Loop expl functions
-                for expl_type, expl_func in expl_types.items():
-                    # Function signature: s, o, corr, net, graph_type, **kwargs
-                    # Function should return what will be kept in the
-                    # 'expl_data' column of the expl_df
+            pybel_res_cache = {}
+            for expl_type, expl_func in expl_types.items():
+                # Todo:
+                #  - For pybel model checker, cache results from either
+                #    a-b or a-x-b searches for future use of the other
+                #    explanation
+                # Function signature: s, o, corr, net, graph_type, **kwargs
+                # Function should return what will be kept in the
+                # 'expl_data' column of the expl_df
 
-                    # Skip if 'explained set', which is caught above
-                    if expl_type == 'explained set':
-                        continue
+                # Skip if 'explained set', which is caught above
+                if expl_type == 'explained set':
+                    continue
 
-                    # Some functions reverses A, B hence the s, o assignment
-                    s, o, expl_data = expl_func(A, B, zsc, indranet, _type,
+                # Some functions reverses A, B hence the s, o assignment
+                if _type == 'pybel':
+                    # Check for cached results
+                    # Todo check if max_path_len should be == 2 or == 3
+                    if expl_type in pybel_res_cache:
+                        s, o, expl_data = pybel_res_cache[expl_type]
+                    else:
+                        s, o, expl_data = expl_func(gA, gB, zsc, indranet,
+                                                    _type, **options)
+                        if expl_type in {'a-b', 'b-a', 'a-x-b', 'b-x-a'}:
+                            one_edge_data, two_edge_data = expl_data
+                            if expl_type in {'a-b', 'a-x-b'}:
+                                pybel_res_cache['a-b'] = (s, o, one_edge_data)
+                                pybel_res_cache['a-x-b'] = \
+                                    (s, o, two_edge_data)
+                            else:
+                                pybel_res_cache['b-a'] = (s, o, one_edge_data)
+                                pybel_res_cache['b-x-a'] = \
+                                    (s, o, two_edge_data)
+
+                else:
+                    s, o, expl_data = expl_func(gA, gB, zsc, indranet, _type,
                                                 **options)
-                    if expl_data:
-                        # Use original name
-                        s_name = s.name if _type == 'pybel' else s
-                        o_name = o.name if _type == 'pybel' else o
-                        expl_dict['agA'].append(s_name)
-                        expl_dict['agB'].append(o_name)
-                        expl_dict['z-score'].append(zsc)
-                        expl_dict['expl type'].append(expl_type)
-                        expl_dict['expl data'].append(expl_data)
+                if expl_data:
+                    # Use original name
+                    expl_dict['agA'].append(s)
+                    expl_dict['agB'].append(o)
+                    expl_dict['z-score'].append(zsc)
+                    expl_dict['expl type'].append(expl_type)
+                    expl_dict['expl data'].append(expl_data)
 
-                        # Append to expl_iterations
-                        expl_iterations[expl_type].append(expl_data)
-
-            # Check which ones got explained
-            for expl_type_, expl_data_ in expl_iterations.items():
-                stats[expl_type_] = bool(expl_data_)
+                # Append to expl_iterations
+                stats[expl_type] = bool(expl_data)
 
             # Set explained column
             stats['explained'] = any([b for b in stats.values()])
