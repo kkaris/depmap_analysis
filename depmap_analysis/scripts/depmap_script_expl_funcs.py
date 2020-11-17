@@ -66,15 +66,10 @@ def explained(s, o, corr, net, _type, **kwargs):
 
 
 def find_cp(s, o, corr, net, _type, **kwargs):
-    if _type == 'pybel':
-        s_name = kwargs['s_name']
-        s_ns, s_id = get_ns_id_pybel_node(hgnc_sym=s_name, node=s)
-        o_name = kwargs['o_name']
-        o_ns, o_id = get_ns_id_pybel_node(hgnc_sym=o_name, node=o)
-    else:
-        s_name = s
-        o_name = o
-        s_ns, s_id, o_ns, o_id = get_ns_id(s, o, net)
+    s_name = kwargs['s_name']
+    s_ns, s_id = kwargs['s_ns'], kwargs['s_id']
+    o_name = kwargs['o_name']
+    o_ns, o_id = kwargs['o_ns'], kwargs['o_id']
 
     if not s_id:
         s_ns, s_id, s_norm_name = gilda_normalization(s_name)
