@@ -35,8 +35,7 @@ from typing import Union, List, Dict, Iterable
 from pathlib import Path
 from typing import List, Union, Tuple, Iterable
 from datetime import datetime
-from itertools import product
-from collections import defaultdict
+from itertools import groupby, product
 
 import numpy as np
 import pandas as pd
@@ -49,7 +48,7 @@ from depmap_analysis.util.aws import get_s3_client
 from depmap_analysis.util.io_functions import file_opener, \
     dump_it_to_pickle, allowed_types, file_path, strip_out_date
 from depmap_analysis.network_functions.net_functions import \
-    pybel_node_name_mapping
+    pybel_node_name_mapping, ns_id_from_name
 from depmap_analysis.network_functions.depmap_network_functions import \
     corr_matrix_to_generator, iter_chunker, down_sampl_size, \
     drugs_to_corr_matrix
@@ -69,9 +68,11 @@ output_list = []
 def _match_correlation_body(corr_iter, expl_types, stats_columns,
                             expl_columns, bool_columns, min_columns,
                             explained_set, _type, allowed_ns=None,
-                            is_a_part_of=None, immediate_only=False):
+                            is_a_part_of=None, immediate_only=False,
+                            gilda=False):
     try:
         global indranet
+        none_count = 0
 
         stats_dict = {k: [] for k in stats_columns}
         expl_dict = {k: [] for k in expl_columns}
@@ -81,7 +82,7 @@ def _match_correlation_body(corr_iter, expl_types, stats_columns,
         if allowed_ns:
             options['ns_set'] = allowed_ns
 
-        for gA, gB, zsc in corr_iter:
+        for loop_count, (gA, gB, zsc) in enumerate(corr_iter):
             # Initialize current iteration stats
             stats = {k: False for k in bool_columns}
 
@@ -117,6 +118,29 @@ def _match_correlation_body(corr_iter, expl_types, stats_columns,
                 )
             else:
                 a_ns, a_id, b_ns, b_id = get_ns_id(gA, gB, indranet)
+
+            if not (a_ns and a_id and b_ns and b_id):
+                got_none = False
+                if gilda:
+                    if not a_id:
+                        a_ns, a_id = ns_id_from_name(gA)
+                    if not b_id:
+                        b_ns, b_id = ns_id_from_name(gA)
+                    if not (a_ns and a_id and b_ns and b_id):
+                        none_count += 1
+                        got_none = True
+                else:
+                    none_count += 1
+                    got_none = True
+                if got_none:
+                    for k in set(stats_dict.keys()).difference(set(min_columns)):
+                        if k == 'ungroundable':
+                            # Flag not in graph
+                            stats_dict[k].append(True)
+                        else:
+                            # All columns are NaN's
+                            stats_dict[k].append(np.nan)
+                    continue
 
             # Append to stats dict
             stats_dict['agA_ns'].append(a_ns)
@@ -218,9 +242,27 @@ def _match_correlation_body(corr_iter, expl_types, stats_columns,
                 stats_dict[expl_tp].append(stats[expl_tp])
 
             # Assert that all columns are the same length
-            if not all(len(ls) for ls in stats_dict.values()):
-                raise IndexError('Unequal column lengths in stats_dict after '
-                                 'iteration')
+            col_lists = list(stats_dict.values())
+            try:
+                if not all(len(ls) for ls in col_lists):
+                    zero_lens = [k for k, v in stats_dict.values()
+                                 if len(v) == 0]
+                    raise ValueError(f'One or more columns have no data: '
+                                     f'{", ".join(zero_lens)}')
+                fl = col_lists[0]
+                if not all(len(ls) == len(fl) for ls in stats_dict.values()):
+                    ls = [f'{k}: {len(ls)}' for k, ls in stats_dict.items()]
+                    raise ValueError(
+                        f'Unequal column lengths in stats_dict after '
+                        f'iteration. Lengths: {", ".join(ls)}')
+            except ValueError as err:
+                lens = [k for k, _ in groupby(sorted(col_lists, key=len),
+                                              key=len)]
+                raise ValueError(f'Got unequal lengths for columns: {lens}') \
+                    from err
+
+        logger.info(f'None skips: {none_count} (process '
+                    f'{mp.current_process().pid})')
         return stats_dict, expl_dict
     except Exception as exc:
         raise WrapException()
@@ -281,7 +323,8 @@ def match_correlations(corr_z, sd_range, script_settings, **kwargs):
     if not len(expl_types):
         raise ValueError('No explanation functions provided')
 
-    bool_columns = ('not in graph', 'explained') + tuple(expl_types.keys())
+    bool_columns = ('not in graph', 'ungroundable', 'explained') + \
+        tuple(expl_types.keys())
     stats_columns = id_columns + bool_columns
     expl_columns = ('agA', 'agB', 'z-score', 'expl type', 'expl data')
     explained_set = kwargs.get('explained_set', set())
@@ -308,6 +351,7 @@ def match_correlations(corr_z, sd_range, script_settings, **kwargs):
     depmap_date = kwargs['depmap_date'] if kwargs.get('depmap_date') \
         else (strip_out_date(dm_file, r'\d{8}')
               if strip_out_date(dm_file, r'\d{8}') else ymd_now)
+    gilda = kwargs.get('gilda', False)
 
     estim_pairs = corr_z.notna().sum().sum()
     print(f'Starting workers at {datetime.now().strftime("%H:%M:%S")} with '
@@ -337,7 +381,8 @@ def match_correlations(corr_z, sd_range, script_settings, **kwargs):
                                  _type,
                                  allowed_ns,
                                  is_a_part_of,
-                                 immediate_only
+                                 immediate_only,
+                                 gilda
                              ),
                              callback=success_callback,
                              error_callback=error_callback)
@@ -574,6 +619,9 @@ def main(indra_net, outname, graph_type, sd_range, random=False,
     if indra_date:
         info_dict['indra_date'] = indra_date
     run_options['info'] = info_dict
+
+    # Get grounding from Gilda when it's missing
+    run_options['gilda'] = True
 
     # Set the script_settings
     run_options['script_settings'] = {'raw_data': raw_data,
