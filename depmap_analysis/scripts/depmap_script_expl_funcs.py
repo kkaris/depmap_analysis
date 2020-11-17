@@ -144,7 +144,8 @@ def get_sr(s, o, corr, net, _type, **kwargs):
             if _type == 'signed' else x_set
     elif _type == 'pybel':
         x_nodes = get_shared_interactors_pb(pbmc=net, corr=corr,
-                                            reverse=True, **kwargs)
+                                            reverse=True, depth_limit=2,
+                                            **kwargs)
     else:
         raise ValueError(f'Unhandled type {_type}')
 
@@ -167,7 +168,8 @@ def get_st(s, o, corr, net, _type, **kwargs):
             if _type == 'signed' else x_set
     elif _type == 'pybel':
         x_nodes = get_shared_interactors_pb(pbmc=net, corr=corr,
-                                            reverse=False, **kwargs)
+                                            reverse=False, depth_limit=2,
+                                            **kwargs)
     else:
         raise ValueError(f'Unhandled type {_type}')
 
@@ -457,8 +459,8 @@ def get_pb_paths(s_name: str, s_ns: str, s_id: str, o_name: str, o_ns: str,
 
 def get_shared_interactors_pb(
         s_name: str, s_ns: str, s_id: str, o_name: str, o_ns: str, o_id: str,
-        pbmc: PybelModelChecker, corr: float, reverse: bool,
-        pybel_stmt_types: List[Statement] = None) \
+        pbmc: PybelModelChecker, corr: float, reverse: bool, depth_limit: int,
+        pybel_stmt_types: List[Statement] = None, **kwargs) \
         -> Set[Tuple[Tuple[BaseEntity, int]]]:
     """
 
@@ -474,6 +476,7 @@ def get_shared_interactors_pb(
     corr : float
     reverse : bool
         True if upstream, False if downstream
+    depth_limit : int
     pybel_stmt_types : List[Statement]
 
     Returns
@@ -494,15 +497,20 @@ def get_shared_interactors_pb(
         standardize_agent_name(ag_a)
         query_a = OpenSearchQuery(ag_a, stmt_type, 'subject', ['HGNC', 'FPLX'])
         # Get both signs
-        a_pos.update(_get_neigh(query_a, pbmc, reverse, sign=pos))
-        a_neg.update(_get_neigh(query_a, pbmc, reverse, sign=neg))
+        a_pos.update(_get_neigh(query_a, pbmc, reverse, sign=pos,
+                                depth_limit=depth_limit))
+        a_neg.update(_get_neigh(query_a, pbmc, reverse, sign=neg,
+                                depth_limit=depth_limit))
 
         # Do query for b
         ag_b = Agent(o_name, db_refs={o_ns: o_id})
         standardize_agent_name(ag_b)
         query_b = OpenSearchQuery(ag_b, stmt_type, 'subject', ['HGNC', 'FPLX'])
-        b_pos.update(_get_neigh(query_b, pbmc, reverse, sign=pos))
-        b_neg.update(_get_neigh(query_b, pbmc, reverse, sign=neg))
+        # Get both signs
+        b_pos.update(_get_neigh(query_b, pbmc, reverse, sign=pos,
+                                depth_limit=depth_limit))
+        b_neg.update(_get_neigh(query_b, pbmc, reverse, sign=neg,
+                                depth_limit=depth_limit))
 
         # todo: break loop early if we have results?
 
@@ -521,7 +529,7 @@ def get_shared_interactors_pb(
 
 
 def _get_neigh(query: OpenSearchQuery, pbmc: PybelModelChecker, reverse: bool,
-               sign: int) -> Set[Tuple[BaseEntity]]:
+               sign: int, depth_limit: int) -> Set[Tuple[BaseEntity]]:
     """
 
     Parameters
@@ -532,6 +540,8 @@ def _get_neigh(query: OpenSearchQuery, pbmc: PybelModelChecker, reverse: bool,
         True if upstream, False if downstream
     sign : int
         The target sign of the search
+    depth_limit : int
+        How many edges deep to do search
 
     Returns
     -------
@@ -544,7 +554,7 @@ def _get_neigh(query: OpenSearchQuery, pbmc: PybelModelChecker, reverse: bool,
     if nodes:
         path_gen = bfs_search_multiple_nodes(
             g=pbmc.get_graph(), source_nodes=nodes, reverse=reverse, sign=sign,
-            depth_limit=1)
+            depth_limit=depth_limit)
         return {tuple(n[0] for n in path) for path in path_gen}
     else:
         return set()
