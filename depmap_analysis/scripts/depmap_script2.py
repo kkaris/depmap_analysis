@@ -275,7 +275,7 @@ def match_correlations(corr_z, sd_range, script_settings, **kwargs):
         filtered the correlations to the proper SD ranges and removed the
         genes that are not applicable for this explanation,
         self correlations should also have been removed.
-    indranet : nx.DiGraph
+    indranet : Union[nx.DiGraph, PybelModelChecker]
         The graph representation of the indra network. Each edge should
         have an attribute named 'statements' containing a list of sources
         supporting that edge. If signed search, indranet is expected to be an
