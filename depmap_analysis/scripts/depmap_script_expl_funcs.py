@@ -106,7 +106,7 @@ def expl_axb(s, o, corr, net, _type, **kwargs):
             if _type == 'signed' else x_set
     elif _type == 'pybel':
         # Here, x_nodes is a tuple of (one_edge_paths, two_edge_paths)
-        x_nodes = get_pb_paths(pbmc=net, max_path_len=3, **kwargs)
+        x_nodes = get_pb_paths(pbmc=net, max_path_len=4, **kwargs)
     else:
         raise ValueError(f'Unhandled type {_type}')
 
