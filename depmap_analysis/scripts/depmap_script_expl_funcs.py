@@ -21,9 +21,9 @@ from depmap_analysis.network_functions.net_functions import gilda_normalization,
 
 
 __all__ = ['explained', 'expl_ab', 'expl_ba', 'expl_axb', 'expl_bxa',
-           'find_cp', 'get_sd', 'get_sr', 'get_st', 'get_ns_id_pybel_node',
-           'get_ns_id', 'normalize_corr_names', 'expl_functions',
-           'funcname_to_colname']
+           'find_cp', 'get_sd', 'get_sr', 'get_st',
+           'get_ns_id_name_pybel_node', 'get_ns_id',
+           'normalize_corr_names', 'expl_functions', 'funcname_to_colname']
 graph_types = {'unsigned', 'signed', 'pybel'}
 
 
@@ -116,7 +116,7 @@ def expl_axb(s, o, corr, net, _type, **kwargs):
         if _type == 'pybel':
             # Only check the two edge paths
             oe, te = x_nodes
-            te = [p for p in te if get_ns_id_pybel_node(p[1])[0].lower()
+            te = [p for p in te if get_ns_id_name_pybel_node(p[1])[0].lower()
                   in kwargs['ns_set']]
             x_nodes = oe, te
         else:
@@ -360,8 +360,9 @@ def get_ns_id(subj, obj, net):
     return s_ns, s_id, o_ns, o_id
 
 
-def get_ns_id_pybel_node(node: Union[BaseEntity, Tuple[BaseEntity]],
-                         hgnc_sym: str = None):
+def get_ns_id_name_pybel_node(node: Union[BaseEntity, Tuple[BaseEntity]],
+                              hgnc_sym: str = None) -> \
+        Tuple[Union[None, str], Union[None, str], Union[None, str]]:
     """
 
     Parameters
@@ -374,39 +375,41 @@ def get_ns_id_pybel_node(node: Union[BaseEntity, Tuple[BaseEntity]],
     Returns
     -------
     tuple
-        Tuple of ns, id for node
+        Tuple of ns, id, name for node
     """
     # If tuple of nodes, recursive call until match is found
     if isinstance(node, tuple):
         for n in node:
-            ns, _id = get_ns_id_pybel_node(n, hgnc_sym)
+            ns, _id, name = get_ns_id_name_pybel_node(n, hgnc_sym)
             if ns is not None:
-                return ns, _id
+                return ns, _id, name
         logger.warning('None of the names in the tuple matched the HGNC '
                        'symbol')
-        return None, None
+        return None, None, None
     # If PyBEL node, check name match, return if match, else None tuple
     elif isinstance(node, BaseEntity):
         try:
-            ns, name = _get_pb_name_ns(node)
-            if name == hgnc_sym:
-                return ns, name
+            ns, _id, name = _get_pb_ns_id(node)
+            if hgnc_sym and _id == hgnc_sym:
+                return ns, _id, name
+            elif hgnc_sym is None and ns is not None:
+                return ns, _id, name
             else:
-                return None, None
+                return None, None, None
         except AttributeError:
-            return None, None
+            return None, None, None
     # Not recognized
     else:
         logger.warning(f'Type {node.__class__} not recognized')
-        return None, None
+        return None, None, None
 
 
-def _get_pb_name_ns(pbn: BaseEntity) -> Tuple[str, str]:
+def _get_pb_ns_id(pbn: BaseEntity) -> Tuple[str, str, str]:
     if isinstance(pbn, ComplexAbundance):
-        return _get_pb_name_ns(pbn.members[0])
+        return _get_pb_ns_id(pbn.members[0])
     if isinstance(pbn, Reaction):
-        return _get_pb_name_ns(pbn.products[0])
-    return pbn.namespace, pbn.name
+        return _get_pb_ns_id(pbn.products[0])
+    return pbn.namespace, pbn.identifier, pbn.name
 
 
 def get_pb_paths(s_name: str, s_ns: str, s_id: str, o_name: str, o_ns: str,

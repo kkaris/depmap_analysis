@@ -106,12 +106,13 @@ def _match_correlation_body(corr_iter, expl_types, stats_columns,
                         stats_dict[k].append(np.nan)
                 continue
 
+            # Get ns, id, name for A and B
             if _type == 'pybel':
                 # Get ns, id
-                a_ns, a_id = get_ns_id_pybel_node(
+                a_ns, a_id, a_name = get_ns_id_name_pybel_node(
                     hgnc_sym=gA, node=tuple(hgnc_node_mapping[gA])
                 )
-                b_ns, b_id = get_ns_id_pybel_node(
+                b_ns, b_id, b_name = get_ns_id_name_pybel_node(
                     hgnc_sym=gB, node=tuple(hgnc_node_mapping[gB])
                 )
             else:
