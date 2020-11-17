@@ -25,6 +25,10 @@ __all__ = ['explained', 'expl_ab', 'expl_ba', 'expl_axb', 'expl_bxa',
            'get_ns_id_name_pybel_node', 'get_ns_id',
            'normalize_corr_names', 'expl_functions', 'funcname_to_colname']
 graph_types = {'unsigned', 'signed', 'pybel'}
+pbmc_get_graph_options = dict(include_variants=True,
+                              symmetric_variant_links=True,
+                              include_components=True,
+                              symmetric_component_links=True)
 
 
 def _issubclass_excl(Cls: Statement, ClsOther: Union[Iterable, Statement]) \

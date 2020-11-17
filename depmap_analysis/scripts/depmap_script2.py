@@ -236,6 +236,14 @@ def match_correlations(corr_z, sd_range, script_settings, **kwargs):
         An instance of the DepMapExplainer class containing the explanations
         for the correlations.
     """
+    global indranet
+    _type = kwargs.get('graph_type', 'unsigned')
+
+    if _type == 'pybel':
+        # Initialize graph
+        assert isinstance(indranet, PybelModelChecker)
+        _ = indranet.get_graph(**pbmc_get_graph_options)
+
     # Map each expl type to a function that handles that explanation
     if not kwargs.get('expl_funcs'):
         # No function names provided, use all explanation functions
