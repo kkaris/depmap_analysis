@@ -48,7 +48,7 @@ logger = logging.getLogger(__name__)
 def expl_func(ef):
     @wraps(ef)
     def decorator(*args, **kwargs):
-        _type = kwargs['_type']
+        _type = args[4]
         if _type not in graph_types:
             raise ValueError(f'Unknown graph type {_type}. Graph type must '
                              f'be one of {", ".join(graph_types)}')
@@ -56,13 +56,11 @@ def expl_func(ef):
     return decorator
 
 
-@expl_func
 def explained(s, o, corr, net, _type, **kwargs):
     # This function is used for a priori explained relationships
     return s, o, 'explained_set'
 
 
-@expl_func
 def find_cp(s, o, corr, net, _type, **kwargs):
     if _type == 'pybel':
         s_name = kwargs['s_name']
@@ -102,7 +100,6 @@ def find_cp(s, o, corr, net, _type, **kwargs):
     return s, o, None
 
 
-@expl_func
 def expl_axb(s, o, corr, net, _type, **kwargs):
     if _type in {'signed', 'unsigned'}:
         x_set = set(net.succ[s]) & set(net.pred[o])
@@ -132,7 +129,6 @@ def expl_axb(s, o, corr, net, _type, **kwargs):
         return s, o, None
 
 
-@expl_func
 def expl_bxa(s, o, corr, net, _type, **kwargs):
     if _type == 'pybel':
         options = _flip_options(**kwargs)
@@ -142,7 +138,6 @@ def expl_bxa(s, o, corr, net, _type, **kwargs):
 
 
 # Shared regulator: A<-X->B
-@expl_func
 def get_sr(s, o, corr, net, _type, **kwargs):
     if _type in {'signed', 'unsigned'}:
         x_set = set(net.pred[s]) & set(net.pred[o])
@@ -166,7 +161,6 @@ def get_sr(s, o, corr, net, _type, **kwargs):
 
 
 # Shared target: A->X<-B
-@expl_func
 def get_st(s, o, corr, net, _type, **kwargs):
     if _type in {'signed', 'unsigned'}:
         x_set = set(net.succ[s]) & set(net.succ[o])
@@ -189,7 +183,6 @@ def get_st(s, o, corr, net, _type, **kwargs):
         return s, o, None
 
 
-@expl_func
 def get_sd(s, o, corr, net, _type, **kwargs):
     def get_nnn_set(n: str, g: MultiDiGraph, signed: bool) \
             -> Set[Union[str, Tuple[str, str]]]:
@@ -234,7 +227,6 @@ def get_sd(s, o, corr, net, _type, **kwargs):
         return s, o, None
 
 
-@expl_func
 def expl_ab(s, o, corr, net, _type, **kwargs):
     edge_dict = get_edge_statements(s, o, corr, net, _type, **kwargs)
     if edge_dict:
@@ -243,7 +235,6 @@ def expl_ab(s, o, corr, net, _type, **kwargs):
     return s, o, None
 
 
-@expl_func
 def expl_ba(s, o, corr, net, _type, **kwargs):
     if _type == 'pybel':
         options = _flip_options(**kwargs)
