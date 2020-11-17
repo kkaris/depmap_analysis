@@ -229,10 +229,13 @@ def get_sd(s, o, corr, net, _type, **kwargs):
 
 
 def expl_ab(s, o, corr, net, _type, **kwargs):
-    edge_dict = get_edge_statements(s, o, corr, net, _type, **kwargs)
+    if _type == 'pybel':
+        data = get_pb_paths(pbmc=net, max_path_len=4, **kwargs)
+        return s, o, data
+    else:
+        edge_dict = get_edge_statements(s, o, corr, net, _type, **kwargs)
     if edge_dict:
-        return s, o, edge_dict.get('stmt_hash') if _type == 'pybel' else \
-            edge_dict.get('statements')
+        return s, o, edge_dict.get('statements')
     return s, o, None
 
 
