@@ -418,8 +418,8 @@ def _get_pb_ns_id(pbn: BaseEntity) -> Tuple[str, str, str]:
 
 def get_pb_paths(s_name: str, s_ns: str, s_id: str, o_name: str, o_ns: str,
                  o_id: str, pbmc: PybelModelChecker, max_path_len: int,
-                 pybel_stmt_types: List[Statement] = None) \
-        -> Tuple[List[List[BaseEntity]], List[List[BaseEntity]]]:
+                 pybel_stmt_types: List[Statement] = None, **kwargs) \
+        -> Tuple[List[Tuple[BaseEntity]], List[Tuple[BaseEntity]]]:
     """Given HGNC symbols a & b, find paths using the provided model checker
 
     The paths are directed paths of a->b or a->x->b
@@ -444,20 +444,24 @@ def get_pb_paths(s_name: str, s_ns: str, s_id: str, o_name: str, o_ns: str,
     pybel_stmt_types = pb_stmt_classes if pybel_stmt_types is None else \
         pybel_stmt_types
     one_edge_results = set()
-    two_edge_results = set()
+    longer_results = set()
     for StmtClass in pybel_stmt_types:
-        stmt = StmtClass(Agent(s_name, db_refs={s_ns: s_id}),
-                         Agent(o_name, db_refs={o_ns: o_id}))
+        ag_s = Agent(s_name, db_refs={s_ns: s_id})
+        standardize_agent_name(ag_s)
+        ag_o = Agent(o_name, db_refs={o_ns: o_id})
+        standardize_agent_name(ag_o)
+        stmt = StmtClass(ag_s, ag_o)
         mc_res = pbmc.check_statement(stmt=stmt, max_paths=10000,
                                       max_path_length=max_path_len)
         if mc_res.path_found:
             for path in mc_res.paths:
+                # Only get node, not sign
                 if len(path) == 2:
-                    one_edge_results.add([p[0] for p in path])
-                elif len(path) == 3:
-                    two_edge_results.add([p[0] for p in path])
+                    one_edge_results.add(tuple([p[0] for p in path]))
+                elif len(path) >= 3:
+                    longer_results.add(tuple([p[0] for p in path]))
 
-    return list(one_edge_results), list(two_edge_results)
+    return list(one_edge_results), list(longer_results)
 
 
 def get_shared_interactors_pb(
