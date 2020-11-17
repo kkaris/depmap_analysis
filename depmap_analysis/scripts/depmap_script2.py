@@ -173,11 +173,7 @@ def _match_correlation_body(corr_iter, expl_types, stats_columns,
                     # And skip the rest of explanations
                     continue
 
-            # Create iterator for pairs
-            expl_iter = product(hgnc_node_mapping[gA], hgnc_node_mapping[gB]) \
-                if _type == 'pybel' else [(gA, gB)]
-
-            # Add hgnc symbol name to expl kwargs if pybel
+            # Add hgnc info if pybel
             if _type == 'pybel':
                 options['s_name'] = gA
                 options['s_ns'] = a_ns
@@ -329,7 +325,6 @@ def match_correlations(corr_z, sd_range, script_settings, **kwargs):
     expl_columns = ('agA', 'agB', 'z-score', 'expl type', 'expl data')
     explained_set = kwargs.get('explained_set', set())
 
-    _type = kwargs.get('graph_type', 'unsigned')
     logger.info(f'Doing correlation matching with {_type} graph')
 
     # Get options
