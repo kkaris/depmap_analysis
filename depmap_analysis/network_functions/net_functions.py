@@ -470,24 +470,46 @@ def sif_dump_df_to_digraph(df, strat_ev_dict, belief_dict,
     return indranet_graph
 
 
-def _custom_pb_assembly(stmts_list: List[Statement] = None) -> pybel.BELGraph:
+def _custom_pb_assembly(stmts_list: List[Statement] = None,
+                        filter_to: List[str] = None) -> pybel.BELGraph:
+    """
+
+    Parameters
+    ----------
+    stmts_list : List[Statement]
+    filter_to : List[str]
+        A list of name spaces to filter the statements to. Default: All
+        statements.
+
+    Returns
+    -------
+    pybel.BELGraph
+    """
+    def _all_agents_in_ns_list(st: Statement, nsl: List[str]):
+        for a in st.agent_list():
+            if not any(ns in a.db_refs for ns in nsl):
+                return False
+        return True
+
     if stmts_list is None:
         logger.info('No statements provided, downloading latest pa stmt dump')
         stmts_list = get_latest_pa_stmt_dump()
-
     # Filter bad statements
     logger.info('Filtering out bad statements')
     filtered_stmts = []
-    for st in stmts_list:
+    for stmt in stmts_list:
+        # Check if we should filter statements by name space
+        if filter_to and not _all_agents_in_ns_list(st=stmt, nsl=filter_to):
+            continue
         # Check creation of conversion
-        if isinstance(st, Conversion):
+        if isinstance(stmt, Conversion):
             try:
-                if st.subj is None or not st.obj_from and not st.obj_to:
+                if stmt.subj is None or not stmt.obj_from and not stmt.obj_to:
                     continue
                 pybel_lists = ([], [])
                 for pybel_list, agent_list in \
-                        zip(pybel_lists, (st.obj_from, st.obj_to)):
-                    for ag in st.agent_list():
+                        zip(pybel_lists, (stmt.obj_from, stmt.obj_to)):
+                    for ag in stmt.agent_list():
                         node = _get_agent_grounding(ag)
                         pybel_list.append(node)
                 if all(len(pbl) == 0 for pbl in pybel_lists):
@@ -495,18 +517,18 @@ def _custom_pb_assembly(stmts_list: List[Statement] = None) -> pybel.BELGraph:
             except AttributeError:
                 continue
         try:
-            pos = getattr(st, 'position')
+            pos = getattr(stmt, 'position')
             try:
                 if pos is not None and str(int(float(pos))) != pos:
                     continue
                 else:
-                    filtered_stmts.append(st)
+                    filtered_stmts.append(stmt)
             # Pos is not convertible to float
             except ValueError:
                 continue
         # Not a statement with a position attribute
         except AttributeError:
-            filtered_stmts.append(st)
+            filtered_stmts.append(stmt)
 
     # Assemble Pybel model
     logger.info('Assembling PyBEL model')
