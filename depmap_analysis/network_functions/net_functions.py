@@ -470,8 +470,8 @@ def sif_dump_df_to_digraph(df, strat_ev_dict, belief_dict,
     return indranet_graph
 
 
-def _custom_pb_assembly(stmts_list: List[Statement] = None,
-                        filter_to: List[str] = None) -> pybel.BELGraph:
+def custom_pb_assembly(stmts_list: List[Statement] = None,
+                       filter_to: List[str] = None) -> pybel.BELGraph:
     """
 
     Parameters
@@ -566,7 +566,7 @@ def db_dump_to_pybel_sg(stmts_list=None, pybel_model=None, belief_dump=None,
     # Get statement dump:
     # Look for latest file on S3 and pickle.loads it
     if pybel_model is None:
-        pb_model = _custom_pb_assembly(stmts_list)
+        pb_model = custom_pb_assembly(stmts_list)
     else:
         logger.info('Pybel model provided')
         pb_model = pybel_model
