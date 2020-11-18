@@ -498,9 +498,6 @@ def custom_pb_assembly(stmts_list: List[Statement] = None,
     logger.info('Filtering out bad statements')
     filtered_stmts = []
     for stmt in stmts_list:
-        # Check if we should filter statements by name space
-        if filter_to and not _all_agents_in_ns_list(st=stmt, nsl=filter_to):
-            continue
         # Check creation of conversion
         if isinstance(stmt, Conversion):
             try:
@@ -516,6 +513,12 @@ def custom_pb_assembly(stmts_list: List[Statement] = None,
                     continue
             except AttributeError:
                 continue
+        else:
+            if any(a is None for a in stmt.agent_list()):
+                continue
+        # Filter out statements with agents outside provided name space
+        if filter_to and not _all_agents_in_ns_list(st=stmt, nsl=filter_to):
+            continue
         try:
             pos = getattr(stmt, 'position')
             try:
