@@ -1,4 +1,5 @@
 import logging
+from typing import List
 from decimal import Decimal
 from itertools import cycle
 from collections import defaultdict
@@ -14,11 +15,13 @@ from indra.config import CONFIG_DICT
 from indra.ontology.bio import bio_ontology
 from indra.belief import load_default_probs
 from indra.assemblers.english import EnglishAssembler
-from indra.statements import Agent, get_statement_by_name
+from indra.statements import Agent, get_statement_by_name, Conversion, \
+    Statement
 from indra.assemblers.indranet import IndraNet
 from indra.databases import get_identifiers_url
 from indra.assemblers.pybel import PybelAssembler
-from indra.assemblers.pybel.assembler import belgraph_to_signed_graph
+from indra.assemblers.pybel.assembler import belgraph_to_signed_graph, \
+    _get_agent_grounding, pybel
 from indra.explanation.pathfinding import bfs_search
 from indra.explanation.model_checker.model_checker import \
     signed_edges_to_signed_nodes
@@ -467,15 +470,28 @@ def sif_dump_df_to_digraph(df, strat_ev_dict, belief_dict,
     return indranet_graph
 
 
-def _custom_pb_assembly(stmts_list=None):
+def _custom_pb_assembly(stmts_list: List[Statement] = None) -> pybel.BELGraph:
     if stmts_list is None:
         logger.info('No statements provided, downloading latest pa stmt dump')
         stmts_list = get_latest_pa_stmt_dump()
 
     # Filter bad statements
-    logger.info('Filtering out statements with bad position attribute')
+    logger.info('Filtering out bad statements')
     filtered_stmts = []
     for st in stmts_list:
+        # Check creation of conversion
+        if isinstance(st, Conversion):
+            try:
+                pybel_lists = ([], [])
+                for pybel_list, agent_list in \
+                        zip(pybel_lists, (st.obj_from, st.obj_to)):
+                    for ag in st.agent_list():
+                        node = _get_agent_grounding(ag)
+                        pybel_list.append(node)
+                if all(len(pbl) == 0 for pbl in pybel_lists):
+                    continue
+            except AttributeError:
+                continue
         try:
             pos = getattr(st, 'position')
             try:
