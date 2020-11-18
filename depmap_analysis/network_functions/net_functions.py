@@ -482,6 +482,8 @@ def _custom_pb_assembly(stmts_list: List[Statement] = None) -> pybel.BELGraph:
         # Check creation of conversion
         if isinstance(st, Conversion):
             try:
+                if st.subj is None or not st.obj_from and not st.obj_to:
+                    continue
                 pybel_lists = ([], [])
                 for pybel_list, agent_list in \
                         zip(pybel_lists, (st.obj_from, st.obj_to)):
