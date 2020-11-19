@@ -41,6 +41,7 @@ import numpy as np
 import pandas as pd
 import networkx as nx
 
+from pybel import BELGraph
 from indra.explanation.model_checker import PybelModelChecker
 from indra.util.multiprocessing_traceback import WrapException
 from indra_db.util.s3_path import S3Path
@@ -795,8 +796,13 @@ if __name__ == '__main__':
     args = parser.parse_args()
     arg_dict = vars(args)
 
-    # Load z_corr, indranet and optionally pybel_model
+    # Load z_corr, indranet (could be a pybel_model)
     inet_graph = file_opener(args.indranet)
+    gt = arg_dict.get('graph_type')
+    if gt == 'pybel':
+        if isinstance(inet_graph, BELGraph):
+            inet_graph = PybelModelChecker(model=inet_graph)
+        assert isinstance(inet_graph, PybelModelChecker)
     arg_dict['indra_net'] = inet_graph
     arg_dict['indra_net_file'] = args.indranet
     if arg_dict.get('z_score'):
@@ -819,7 +825,7 @@ if __name__ == '__main__':
     arg_dict['z_score'] = corr_matrix
     hgnc_names = corr_matrix.columns.values
     # Get hgnc node mapping
-    if arg_dict.get('graph_type') == 'pybel' and \
+    if gt == 'pybel' and \
             not arg_dict.get('pybel_node_mapping') and \
             not arg_dict.get('pybel_model'):
         raise ValueError('Must provide PyBEL model with option pybel_model '
