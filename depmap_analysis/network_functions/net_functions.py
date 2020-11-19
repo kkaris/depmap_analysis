@@ -831,7 +831,7 @@ def pybel_node_name_mapping(pb_model, node_names=None, node_ns='HGNC'):
     """
 
     # Get existing node mappings
-    corr_names = set(node_names) if node_names else set()
+    corr_names = set() if node_names is None else set(node_names)
     pb_model_mapping = {}
     for node in pb_model.nodes:
         try:
