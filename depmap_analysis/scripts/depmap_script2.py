@@ -24,6 +24,9 @@ A: Probably outside match correlations, somewhere inside or after
 # Output:
 An instance of the DepMapExplainer class that wraps dataframes that can
 generate different explanations statistics
+
+todo: Assume names are normalized, use initial corr matrix normalization to
+ get ns, id
 """
 import pickle
 import inspect
@@ -49,7 +52,7 @@ from depmap_analysis.util.aws import get_s3_client
 from depmap_analysis.util.io_functions import file_opener, \
     dump_it_to_pickle, allowed_types, file_path, strip_out_date
 from depmap_analysis.network_functions.net_functions import \
-    pybel_node_name_mapping, ns_id_from_name
+    pybel_node_name_mapping, gilda_normalization
 from depmap_analysis.network_functions.depmap_network_functions import \
     corr_matrix_to_generator, iter_chunker, down_sampl_size, \
     drugs_to_corr_matrix
@@ -124,9 +127,9 @@ def _match_correlation_body(corr_iter, expl_types, stats_columns,
                 got_none = False
                 if gilda:
                     if not a_id:
-                        a_ns, a_id = ns_id_from_name(gA)
+                        a_ns, a_id, _ = gilda_normalization(gA)
                     if not b_id:
-                        b_ns, b_id = ns_id_from_name(gA)
+                        b_ns, b_id, _ = gilda_normalization(gA)
                     if not (a_ns and a_id and b_ns and b_id):
                         none_count += 1
                         got_none = True
