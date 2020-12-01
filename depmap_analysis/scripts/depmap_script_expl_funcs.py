@@ -22,7 +22,7 @@ from depmap_analysis.network_functions.net_functions import gilda_normalization,
 
 __all__ = ['explained', 'expl_ab', 'expl_ba', 'expl_axb', 'expl_bxa',
            'find_cp', 'get_sd', 'get_sr', 'get_st',
-           'get_ns_id_name_pybel_node', 'get_ns_id',
+           'get_ns_id_name_pybel_node', 'get_ns_id', 'pbmc_get_graph_options',
            'normalize_corr_names', 'expl_functions', 'funcname_to_colname']
 graph_types = {'unsigned', 'signed', 'pybel'}
 pbmc_get_graph_options = dict(include_variants=True,
