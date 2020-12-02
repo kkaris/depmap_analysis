@@ -8,7 +8,7 @@ import requests
 import numpy as np
 import pandas as pd
 import networkx as nx
-from typing import Tuple, Union, Dict, List
+from typing import Tuple, Union, Dict, List, Optional
 from requests.exceptions import ConnectionError
 
 from indra.config import CONFIG_DICT
@@ -17,7 +17,6 @@ from indra.belief import load_default_probs
 from indra.assemblers.english import EnglishAssembler
 from indra.statements import Agent, get_statement_by_name
 from indra.assemblers.indranet import IndraNet
-from indra.assemblers.indranet.assembler import get_ag_ns_id
 from indra.databases import get_identifiers_url
 from indra.assemblers.pybel import PybelAssembler
 from indra.assemblers.pybel.assembler import belgraph_to_signed_graph
@@ -856,8 +855,11 @@ def yield_multiple_paths(g, sources, path_len=None, **kwargs):
             skip.add(gi)
 
 
-from indra.statements import Statement, Evidence
 from collections import Counter
+from indra.statements import Statement
+from indra.assemblers.indranet.net import default_sign_dict as sign_dict,\
+    _complementary_belief
+from indra.assemblers.indranet.assembler import get_ag_ns_id
 # Example of stmt meta data dict
 # {'stmt_hash': -3713346463771211, 'stmt_type': 'Activation',
 # 'evidence_count': 1, 'belief': 0.65, 'source_counts': {'reach': 1},
@@ -867,26 +869,41 @@ from collections import Counter
 
 def add_stmts_to_graph(g: Union[nx.DiGraph, nx.MultiDiGraph],
                        stmts: List[Statement],
-                       belief_dict: Dict[int, float] = None):
-    def _stmt_in_edge(edge: Tuple[str, str],
-                      md: Dict[str, List[Dict[str, Union[str, int]]]]):
-        if isinstance(g, nx.DiGraph):
+                       belief_dict: Dict[int, float] = None,
+                       graph_type: str = 'unsigned'):
+    def _stmt_in_edge(edge: Tuple[str, str, Optional[Union[int, str]]],
+                      md: Dict[str, List[Dict[str, Union[str, int]]]],
+                      gt: str):
+        if isinstance(g, nx.DiGraph) or graph_type == 'signed':
+            # Iterate over data in DiGraph edge
             return any(str(md['statements'][0]['stmt_hash']) ==
                        str(d['stmt_hash']) for d in
-                       g[edge[0]][edge[1]]['statements'])
+                       g.edges[edge]['statements'])
         elif isinstance(g, nx.MultiDiGraph):
+            # Iterate over individual edges in MultiDiGraph: have to use node
             return any(str(md['statements'][0]['stmt_hash']) ==
-                       str(e['statements']['stmt_hash']) for e in
-                       g[edge[0]][edge[1]])
+                       str(g[edge[0]][edge[1]][k]['stmt_hash'])
+                       for k in g[edge[0]][edge[1]])
     edges_updated = set()
     for stmt in stmts:
         # Get nodes and edge data
         (s, s_ns, s_id), (o, o_ns, o_id), meta_data = \
             get_subj_obj_ed(stmt, belief_dict=belief_dict)
-        edges_updated.add((s, o))
+
+        # Add sign for signed graphs
+        if isinstance(g, nx.MultiDiGraph) and graph_type == 'signed':
+            if meta_data['statements'][0]['stmt_type'] in sign_dict:
+                sign = sign_dict[meta_data['statements'][0]['stmt_type']]
+                meta_data['sign'] = sign
+                edge = (s, o, sign)
+            else:
+                continue
+        else:
+            edge = (s, o)
 
         # Skip if hash is present
-        if (s, o) in g.edges and _stmt_in_edge(edge=(s, o), md=meta_data):
+        if edge in g.edges and _stmt_in_edge(edge=edge, md=meta_data,
+                                             gt=graph_type):
             continue
 
         # Add to or add new edge and nodes
@@ -894,12 +911,31 @@ def add_stmts_to_graph(g: Union[nx.DiGraph, nx.MultiDiGraph],
             g.add_node(s, ns=s_ns, id=s_id)
         if o not in g.nodes:
             g.add_node(o, ns=o_ns, id=o_id)
-        if (s, o) not in g.edges or isinstance(g, nx.MultiDiGraph):
+        # Completely new edges or unsigned MultiDiGraph
+        # Todo make meta data carry 'statements': {...} instead of [{...}]
+        #  then do add on case by case basis
+        if edge not in g.edges or isinstance(g, nx.MultiDiGraph) and \
+                graph_type != 'signed':
             g.add_edge(s, o, **meta_data)
+        # Signed graph
+        elif isinstance(g, nx.MultiDiGraph) and graph_type == 'signed':
+            sign = meta_data['sign']
+            if g.has_edge(*edge):
+                g.edges[edge]['statements'].extend(meta_data['statements'])
+            else:
+                g.add_edge(*edge, **meta_data)
+        # DiGraph/'unsigned'
         elif isinstance(g, nx.DiGraph):
             g[s][o]['statements'].extend(meta_data['statements'])
         else:
             raise TypeError(f'Unhandled graph type {g.__class__}')
+
+        # Add edge to those updated
+        edges_updated.add(edge)
+
+    # Update 'belief' and then 'weight' (in that order!) for the updated edges
+    for e in edges_updated:
+        g[e] = _complementary_belief(G=g, edge=e)
 
 
 def get_subj_obj_ed(stmt: Statement, belief_dict: Dict[int, float] = None) \
