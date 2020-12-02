@@ -7,7 +7,8 @@ import subprocess
 import requests
 import numpy as np
 import pandas as pd
-from typing import Tuple, Union
+import networkx as nx
+from typing import Tuple, Union, Dict, List
 from requests.exceptions import ConnectionError
 
 from indra.config import CONFIG_DICT
@@ -16,6 +17,7 @@ from indra.belief import load_default_probs
 from indra.assemblers.english import EnglishAssembler
 from indra.statements import Agent, get_statement_by_name
 from indra.assemblers.indranet import IndraNet
+from indra.assemblers.indranet.assembler import get_ag_ns_id
 from indra.databases import get_identifiers_url
 from indra.assemblers.pybel import PybelAssembler
 from indra.assemblers.pybel.assembler import belgraph_to_signed_graph
@@ -852,3 +854,120 @@ def yield_multiple_paths(g, sources, path_len=None, **kwargs):
         except StopIteration:
             print(f'Got StopIteration from {gi}')
             skip.add(gi)
+
+
+from indra.statements import Statement, Evidence
+from collections import Counter
+# Example of stmt meta data dict
+# {'stmt_hash': -3713346463771211, 'stmt_type': 'Activation',
+# 'evidence_count': 1, 'belief': 0.65, 'source_counts': {'reach': 1},
+# 'english': 'Lapatinib activates salicylhydroxamic acid.', 'curated':
+# False, 'weight' : 0.4307829160924542}
+
+
+def add_stmts_to_graph(g: Union[nx.DiGraph, nx.MultiDiGraph],
+                       stmts: List[Statement],
+                       belief_dict: Dict[int, float] = None):
+    def _stmt_in_edge(edge: Tuple[str, str],
+                      md: Dict[str, List[Dict[str, Union[str, int]]]]):
+        if isinstance(g, nx.DiGraph):
+            return any(str(md['statements'][0]['stmt_hash']) ==
+                       str(d['stmt_hash']) for d in
+                       g[edge[0]][edge[1]]['statements'])
+        elif isinstance(g, nx.MultiDiGraph):
+            return any(str(md['statements'][0]['stmt_hash']) ==
+                       str(e['statements']['stmt_hash']) for e in
+                       g[edge[0]][edge[1]])
+    edges_updated = set()
+    for stmt in stmts:
+        # Get nodes and edge data
+        (s, s_ns, s_id), (o, o_ns, o_id), meta_data = \
+            get_subj_obj_ed(stmt, belief_dict=belief_dict)
+        edges_updated.add((s, o))
+
+        # Skip if hash is present
+        if (s, o) in g.edges and _stmt_in_edge(edge=(s, o), md=meta_data):
+            continue
+
+        # Add to or add new edge and nodes
+        if s not in g.nodes:
+            g.add_node(s, ns=s_ns, id=s_id)
+        if o not in g.nodes:
+            g.add_node(o, ns=o_ns, id=o_id)
+        if (s, o) not in g.edges or isinstance(g, nx.MultiDiGraph):
+            g.add_edge(s, o, **meta_data)
+        elif isinstance(g, nx.DiGraph):
+            g[s][o]['statements'].extend(meta_data['statements'])
+        else:
+            raise TypeError(f'Unhandled graph type {g.__class__}')
+
+
+def get_subj_obj_ed(stmt: Statement, belief_dict: Dict[int, float] = None) \
+        -> Tuple[
+            Tuple[str, str, str], Tuple[str, str, str],
+            Dict[str,
+                 # belief or weight
+                 Union[float,
+                       # ***
+                       List[
+                           Dict[str, Union[str, int, float, Dict[str, int]]]
+                       ]
+                 ]
+            ]
+        ]:
+    """Get source, target nodes and the edge data"""
+    # For nodes: name, ns, id
+    # For edge: dict with
+    #     {'statements': [...], <- ***
+    #      'belief': 0.123,
+    #      'weight':  0.456}
+    # Where *** = {'stmt_hash': -3713346463771211,
+    #              'stmt_type': 'Activation',
+    #              'evidence_count': 1,
+    #              'belief': 0.65,
+    #              'source_counts': {'reach': 1},
+    #              'english': 'Lapatinib activates salicylhydroxamic acid.',
+    #              'curated': False,
+    #              'weight' : 0.4307829160924542}
+    agS, agO = stmt.agent_list()
+    sub_tuple = get_ag_name_ns_id(agS)
+    obj_tuple = get_ag_name_ns_id(agO)
+    statements_data = stmt_to_ed(stmt, belief_dict=belief_dict)
+    belief = 0.123
+    weight = 0.456
+    # 'statements' in the edge data is a list of dicts of meta data
+    return sub_tuple, obj_tuple, {'belief': belief, 'weight': weight,
+                                  'statements': [statements_data]}
+
+
+def get_ag_name_ns_id(ag: Agent) -> Tuple[str, str, str]:
+    name = ag.name
+    ns, _id = get_ag_ns_id(ag)
+    return name, ns, _id
+
+
+def stmt_to_ed(stmt: Statement, belief_dict: Dict[int, float] = None) -> \
+        Dict[str, Union[int, float, str, Dict[str, int]]]:
+     # {'stmt_hash':      -3713346463771211,
+     #  'stmt_type':      'Activation',
+     #  'evidence_count': 1,
+     #  'belief':         0.65,
+     #  'source_counts':  {'reach': 1},
+     #  'english':        'Lapatinib activates salicylhydroxamic acid.',
+     #  'curated':        False,
+     #  'weight' :        0.4307829160924542}
+    sj = stmt.to_json()
+    sh = stmt.get_hash()
+    belief = belief_dict.get(sh) if belief_dict else stmt.belief
+    src_counts = dict(Counter([ev.source_api for ev in stmt.evidence]))
+    ed = {
+        'stmt_hash': sh,
+        'stmt_type': sj['type'],
+        'evidence_count': sum([v for v in src_counts.values()]),
+        'belief': belief,
+        'source_counts': src_counts,
+        'english': EnglishAssembler([stmt]).make_model(),
+        'curated': _curated_func(src_counts),
+        'weight': _weight_from_belief(belief)
+    }
+    return ed
