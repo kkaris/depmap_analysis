@@ -935,7 +935,16 @@ def add_stmts_to_graph(g: Union[nx.DiGraph, nx.MultiDiGraph],
 
     # Update 'belief' and then 'weight' (in that order!) for the updated edges
     for e in edges_updated:
-        g[e] = _complementary_belief(G=g, edge=e)
+        belief = _complementary_belief(G=g, edge=e)
+        g.edges[e]['belief'] = belief
+        try:
+            g.edges[e]['weight'] = \
+                _weight_from_belief(belief)
+        except FloatingPointError:
+            logger.warning(f'FloatingPointError from unexpected belief '
+                           f'{belief}. Resetting weight to 10*np.longfloat '
+                           f'precision (%.0e)' % Decimal(NP_PRECISION * 10))
+            g.edges[e]['weight'] = NP_PRECISION
 
 
 def get_subj_obj_ed(stmt: Statement, belief_dict: Dict[int, float] = None) \
