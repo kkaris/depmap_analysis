@@ -25,8 +25,12 @@ A: Probably outside match correlations, somewhere inside or after
 An instance of the DepMapExplainer class that wraps dataframes that can
 generate different explanations statistics
 
-todo: Assume names are normalized, use initial corr matrix normalization to
- get ns, id
+todo:
+  - Assume names are normalized, use initial corr matrix normalization to get
+    ns, id
+  - Understand why 'total checked' is not equal to what is printed by
+    >> print(f'Starting workers at {datetime.now().strftime("%H:%M:%S")} with '
+             f'about {estim_pairs} pairs to check')
 """
 import pickle
 import inspect
