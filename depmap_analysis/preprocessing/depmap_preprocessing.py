@@ -14,6 +14,35 @@ logger = logging.getLogger(__name__)
 __all__ = ['run_corr_merge', 'drugs_to_corr_matrix', 'get_mitocarta_info']
 
 
+def inter_df_correlations(df1: pd.DataFrame, df2: pd.DataFrame,
+                          common_axis: Union[int, str] = 0) -> pd.DataFrame:
+    """Calculates the correlation between two data frames
+
+    Assuming the rows are common between df1 and df2, and used as index
+    while the correlations are between the (assumed different) columns
+
+    Parameters
+    ----------
+    df1 : pd.DataFrame
+        Dataframe with common index (or columns) with df2
+    df2 : pd.DataFrame
+        Dataframe with common index (or columns) with df1
+    common_axis : Union[int, str]
+        The axis along which df1 and df2 have commons values.
+        Default: 0 (rows).
+
+    Returns
+    -------
+    pd.DataFrame
+        A data frame containing the correlations between the non-common
+        identifier pairs over the common axis
+    """
+    axis = 1 if common_axis == 0 else 0
+    inter_cor_df = pd.concat([df1, df2], axis=axis,
+                             keys=['df1', 'df2']).corr().loc['df2', 'df1']
+    return inter_cor_df
+
+
 def run_corr_merge(crispr_raw: Optional[Union[str, pd.DataFrame]] = None,
                    rnai_raw: Optional[Union[str, pd.DataFrame]] = None,
                    crispr_corr: Optional[Union[str, pd.DataFrame]] = None,
