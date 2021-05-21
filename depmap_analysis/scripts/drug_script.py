@@ -65,8 +65,8 @@ def get_jaccard_rankings_per_pair(expl_df: pd.DataFrame,
     for (agA, agB, corr, _, _, _, _, _, _, _, _) in \
             stats_df[stats_df.explained == True].itertuples(index=False):
         if agA != agB:
-            l2_a_succ, l2_b_succ, l2_int, l2_uni = ([],) * 4
-            l3_a_succ, l3_b_succ, l3_int, l3_uni = ([],) * 4
+            l2_a_succ, l2_b_succ, l2_int, l2_uni = [], [], [], []
+            l3_a_succ, l3_b_succ, l3_int, l3_uni = [], [], [], []
 
             for n, (expl_type, expl_data) in enumerate(
                     expl_df[['expl type', 'expl data']][
