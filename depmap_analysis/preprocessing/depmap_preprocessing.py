@@ -319,8 +319,8 @@ def raw_depmap_to_corr(depmap_raw_df: pd.DataFrame,
 
 def _get_corrs(crispr_raw: Optional[PathObj], rnai_raw: Optional[PathObj],
                crispr_corr: Optional[PathObj], rnai_corr: Optional[PathObj],
-               save_corr_files: bool, corr_output_dir: str)\
-        -> Tuple[pd.DataFrame, pd.DataFrame]:
+               save_corr_files: bool, corr_output_dir: str) \
+        -> Dict[str, pd.DataFrame]:
     """Helper to sort out getting correlations from either the raw data or
     the correlations.
 
@@ -343,26 +343,38 @@ def _get_corrs(crispr_raw: Optional[PathObj], rnai_raw: Optional[PathObj],
     Returns
     -------
     :
-        A tuple of crispr, rnai correlations
+        A Dict containing all the loaded and preprocessed data
     """
-    # First check for correlation matrix, then get it if it doesn't exist
-    if crispr_corr is not None:
-        if isinstance(crispr_corr, str):
-            logger.info(f'Reading crispr correlations from file {crispr_corr}')
-            crispr_corr_df = pd.read_hdf(crispr_corr)
+    def _get_corr(corr: PathObj):
+        if isinstance(corr, str):
+            logger.info(f'Reading correlations from file {corr}')
+            corr_df = pd.read_hdf(corr)
         else:
-            crispr_corr_df = crispr_corr
-    else:
-        # Create new one, write to input file's directory
-        if isinstance(crispr_raw, str):
-            logger.info(f'Reading raw DepMap data from {crispr_raw}')
+            corr_df = corr
+        return corr_df
+
+    def _get_raw(raw: PathObj):
+        if isinstance(raw, str):
+            logger.info(f'Reading raw DepMap data from {raw}')
             # a)
-            crispr_raw_df = io.file_opener(crispr_raw, index_col=0)
+            raw_df = io.file_opener(raw, index_col=0)
+        elif isinstance(raw, pd.DataFrame):
+            raw_df = raw
         else:
-            crispr_raw_df = crispr_raw
-        crispr_corr_df = raw_depmap_to_corr(crispr_raw_df,
-                                            split_names=True,
-                                            dropna=False)
+            raw_df = None
+        return raw_df
+
+    # First check for correlation matrix, then get it if it doesn't exist
+    crispr_corr_df = None if crispr_corr is None else _get_corr(crispr_corr)
+
+    # Create new one, write to input file's directory
+    crispr_raw_df = _get_raw(crispr_raw)
+
+    if crispr_raw_df is not None and len(crispr_raw_df.columns[0].split()) > 1:
+        crispr_raw_df.columns = [n.split()[0] for n in crispr_raw_df.columns]
+
+    if crispr_corr is None:
+        crispr_corr_df = raw_depmap_to_corr(crispr_raw_df, dropna=False)
 
         if save_corr_files:
             crispr_fpath = Path(corr_output_dir).joinpath(
@@ -372,28 +384,23 @@ def _get_corrs(crispr_raw: Optional[PathObj], rnai_raw: Optional[PathObj],
                 crispr_fpath.parent.mkdir(parents=True, exist_ok=True)
             crispr_corr_df.to_hdf(crispr_fpath.absolute().as_posix(), 'corr')
 
-    if rnai_corr is not None:
-        if isinstance(rnai_corr, str):
-            logger.info(f'Reading rnai correlations from file {crispr_corr}')
-            rnai_corr_df = pd.read_hdf(rnai_corr)
-        else:
-            rnai_corr_df = rnai_corr
-    else:
-        # Create new one, write to input file's directory
-        if isinstance(rnai_raw, str):
-            logger.info(f'Reading raw DepMap data from {rnai_raw}')
-            rnai_raw_df = io.file_opener(rnai_raw, index_col=0)
-        else:
-            rnai_raw_df = rnai_raw
+    # Same for RNAi
+    rnai_corr_df = None if rnai_corr is None else _get_corr(rnai_corr)
 
-        # Check if we need to transpose the df
-        if len(set(crispr_corr_df.columns.values) &
-               set([n.split()[0] for n in rnai_raw_df.columns])) == 0:
-            logger.info('Transposing RNAi raw data dataframe...')
-            rnai_raw_df = rnai_raw_df.T
+    # Create new one, write to input file's directory
+    rnai_raw_df = _get_raw(rnai_raw)
 
-        rnai_corr_df = raw_depmap_to_corr(rnai_raw_df, split_names=True,
-                                          dropna=False)
+    # Check if we need to transpose the df
+    if len(set(crispr_corr_df.columns.values) &
+           set([n.split()[0] for n in rnai_raw_df.columns])) == 0:
+        logger.info('Transposing RNAi raw data dataframe...')
+        rnai_raw_df = rnai_raw_df.T
+
+    if rnai_raw is not None and len(rnai_raw_df.columns[0].split()) > 1:
+        rnai_raw_df.columns = [n.split()[0] for n in rnai_raw_df.columns]
+
+    if rnai_corr is None:
+        rnai_corr_df = raw_depmap_to_corr(rnai_raw_df, dropna=False)
 
         if save_corr_files:
             rnai_fpath = Path(corr_output_dir).joinpath(
@@ -403,7 +410,8 @@ def _get_corrs(crispr_raw: Optional[PathObj], rnai_raw: Optional[PathObj],
             logger.info(f'Saving rnai correlation matrix to {rnai_fpath}')
             rnai_corr_df.to_hdf(rnai_fpath.absolute().as_posix(), 'corr')
 
-    return crispr_corr_df, rnai_corr_df
+    return {'crispr_corr': crispr_corr_df, 'rnai_corr': rnai_corr_df,
+            'crispr_raw': crispr_raw_df, 'rnai_raw': rnai_raw_df}
 
 
 def _merge_z_corr(zdf: pd.DataFrame, other_z_df: pd.DataFrame,
