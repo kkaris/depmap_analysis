@@ -35,14 +35,38 @@ def run_corr_merge(crispr_raw: Optional[path_obj] = None,
     Start with with either the raw DepMap files or pre-calculated
     correlation matrices
 
+    Steps for merging RNAi and CRISPr data sets of gene effect:
+
+    1. If files are raw (if corr, skip to step 2):
+        a) Load with index_col=0
+        b) Make sure columns == genes, indices == cell lines.
+        c) Make sure column names are '<hgnc symbol>' and not
+           '<hgnc symbol> (<hgnc id>)'
+        d) Calculate correlations with 'raw_df.corr()'
+    2. Get z-scores by one of two methods:
+        a) Standard: z = (r - mean) / st. dev
+        b) logp:
+            - get sample sizes
+            - get log of p-value from t distr or beta distr method
+            - get z score from inverse of log of cdf of p-values
+    3. Merge the z-scores with:
+        a) Average: z_avg = (z1 + z2) / 2
+        b) Stouffer: z_st = (z1 + z2) / sqrt(2)
+    4. Drop NaN's: z_df.dropna(axis=0, how='all').dropna(axis=1, how='all'),
+       most are usually from mismatches between the two dataframes.
+    5. Make sure the correlation diagonal (self correlations) is set to NaN:
+       np.fill_diagonal(a=df.values, val=np.nan)
+
     Parameters
     ----------
     crispr_raw :
         Path to the raw crispr data. This file is typically named
-        'Achilles_gene_effect.csv' at the DepMap portal.
+        '*_gene_effect.csv' at the DepMap portal. Sometimes there are
+        multiple data sets under DepMap's CRISPr + Omics releases, double
+        check which of the *_gene_effect[*].csv files to pick.
     rnai_raw :
         Path to the raw RNAi data. This file is typically named
-        'D2_combined_gene_dep_scores.csv'
+        'D2_combined_gene_dep_scores.csv' under the RNAi Screens.
     crispr_corr :
         Path to the pre-calculated crispr data matrix. This data structure
         is the result from running `crispr_raw_df.corr()`.
@@ -64,8 +88,8 @@ def run_corr_merge(crispr_raw: Optional[path_obj] = None,
         where the genes are picked at random from the intersection of genes
         from both the RNAI and CRISPR data sets.
     save_corr_files :
-        If True, save the intermediate correlation data frames for both
-        crispr and rnai. Default: True.
+        If True, save the intermediate data frames for both
+        crispr and rnai. Default: False.
     z_corr_path :
         If provided, save the final correlation dataframe here
 
