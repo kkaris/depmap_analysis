@@ -24,9 +24,9 @@ def run_corr_merge(crispr_raw: Optional[path_obj] = None,
                    rnai_raw: Optional[path_obj] = None,
                    crispr_corr: Optional[path_obj] = None,
                    rnai_corr: Optional[path_obj] = None,
-                   output_dir: str = 'correlation_output',
-                   remove_self_corr: bool = False,
-                   dropna: bool = False,
+                   corr_output_dir: str = 'correlation_output',
+                   remove_self_corr: bool = True,
+                   dropna: bool = True,
                    random_sampl: int = 0,
                    save_corr_files: bool = False,
                    z_corr_path: Optional[str] = None):
@@ -73,7 +73,7 @@ def run_corr_merge(crispr_raw: Optional[path_obj] = None,
     rnai_corr :
         Path to the pre-calculated rnai data matrix. This data structure
         is the result from running `rnai_raw_df.corr()`.
-    output_dir :
+    corr_output_dir :
         If used, write the correlation matrices to this directory.
         Otherwise they will be written to the same directory as the raw
         input data.
@@ -122,7 +122,7 @@ def run_corr_merge(crispr_raw: Optional[path_obj] = None,
                                             dropna=False)
 
         if save_corr_files:
-            crispr_fpath = Path(output_dir).joinpath(
+            crispr_fpath = Path(corr_output_dir).joinpath(
                 '_crispr_all_correlations.h5')
             logger.info(f'Saving crispr correlation matrix to {crispr_fpath}')
             if not crispr_fpath.parent.is_dir():
@@ -153,7 +153,7 @@ def run_corr_merge(crispr_raw: Optional[path_obj] = None,
                                           dropna=False)
 
         if save_corr_files:
-            rnai_fpath = Path(output_dir).joinpath('_rnai_all_correlations.h5')
+            rnai_fpath = Path(corr_output_dir).joinpath('_rnai_all_correlations.h5')
             if not rnai_fpath.parent.is_dir():
                 rnai_fpath.parent.mkdir(parents=True, exist_ok=True)
             logger.info(f'Saving rnai correlation matrix to {rnai_fpath}')
@@ -480,7 +480,7 @@ if __name__ == '__main__':
                             rnai_raw=args.rnai_raw,
                             crispr_corr=args.crispr_corr,
                             rnai_corr=args.rnai_corr,
-                            output_dir=args.output_dir,
+                            corr_output_dir=args.output_dir,
                             random_sampl=args.random,
                             remove_self_corr=False,
                             dropna=args.dropna,
