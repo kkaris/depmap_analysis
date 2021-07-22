@@ -17,13 +17,13 @@ __all__ = ['run_corr_merge', 'drugs_to_corr_matrix', 'get_mitocarta_info']
 MERGE_METHODS = ('average', 'stouffer')
 Z_SC_METHODS = ('standard', 't', 'beta')
 
-path_obj = Union[str, pd.DataFrame]
+PathObj = Union[str, pd.DataFrame]
 
 
-def run_corr_merge(crispr_raw: Optional[path_obj] = None,
-                   rnai_raw: Optional[path_obj] = None,
-                   crispr_corr: Optional[path_obj] = None,
-                   rnai_corr: Optional[path_obj] = None,
+def run_corr_merge(crispr_raw: Optional[PathObj] = None,
+                   rnai_raw: Optional[PathObj] = None,
+                   crispr_corr: Optional[PathObj] = None,
+                   rnai_corr: Optional[PathObj] = None,
                    corr_output_dir: str = 'correlation_output',
                    remove_self_corr: bool = True,
                    dropna: bool = True,
