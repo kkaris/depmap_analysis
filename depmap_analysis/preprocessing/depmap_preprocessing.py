@@ -528,18 +528,39 @@ def _z_scored_pvals(corr_df: pd.DataFrame, raw_df: pd.DataFrame,
     return z_df
 
 
-def _z_scored(corr: pd.DataFrame, method: str = 'beta') -> pd.DataFrame:
+def _z_scored(corr: pd.DataFrame, raw_df: Optional[pd.DataFrame] = None,
+              method: str = 'beta', recalculate: bool = True,
+              file_path: Optional[str] = None) -> pd.DataFrame:
+    # 2. Get z-scores by one of two methods:
+    #     a) Standard: z = (r - mean) / st. dev
+    #     b) logp:
+    #         - get sample sizes
+    #         - get log of p-value from t distr or beta distr method
+    #         - get z score from inverse of log of cdf of p-values
     if method not in Z_SC_METHODS:
         raise ValueError(f'Unrecognized z-score method {method}. Valid '
                          f'methods are {", ".join(Z_SC_METHODS)}')
+    if raw_df is None and method != 'standard':
+        raise ValueError('Must provided raw data if method != "standard"')
+
+    if not recalculate and file_path is not None:
+        z_sc_file_path = _get_filepath(file_path, 'z_sc')
+        logger.info(f'Loading z-scores from file {z_sc_file_path}')
+        z_df: pd.DataFrame = pd.read_hdf(z_sc_file_path)
+        return z_df
+
     logger.info(f'Getting z-scores using {method} method')
     if method == 'standard':
         mean = _get_mean(corr)
         sd = _get_sd(corr)
-        logger.info('Mean value: %f; St dev: %f' % (mean, sd))
+        logger.info('Standard z-score mean value: %f; St dev: %f' %
+                    (mean, sd))
+
         z_df: pd.DataFrame = (corr - mean) / sd
     else:
-        z_df = _z_scored_pvals(corr_df=corr, method=method)
+        z_df = _z_scored_pvals(corr_df=corr, raw_df=raw_df,
+                               method=method, recalculate=recalculate,
+                               file_path=file_path)
     return z_df
 
 
