@@ -554,6 +554,11 @@ def get_mitocarta_info(mitocarta_file: str) -> Dict[str, str]:
     return hgnc_expl
 
 
+def _get_filepath(fp: str, suffix: str) -> str:
+    suffix = suffix if fp.endswith('_') else ('_' + suffix)
+    return fp + suffix
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('DepMap Data pre-processing')
     # Input dirs
