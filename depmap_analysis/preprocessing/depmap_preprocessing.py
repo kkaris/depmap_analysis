@@ -477,22 +477,54 @@ def _merge_z_corr(zdf: pd.DataFrame, other_z_df: pd.DataFrame,
     return dep_z
 
 
-def _z_scored_pvals(corr_df: pd.DataFrame, method: str = 'beta') \
-        -> pd.DataFrame:
+def _z_scored_pvals(corr_df: pd.DataFrame, raw_df: pd.DataFrame,
+                    method: str = 'beta', recalculate: bool = True,
+                    file_path: Optional[str] = None) -> pd.DataFrame:
+    """
+
+    Parameters
+    ----------
+    recalculate :
+        If True, force recalculation of the sampling data, the log p values
+        and the z-score
+    corr_df :
+        Correlation data as a dataframe
+    file_path :
+        If `recalculate==False`: read the data from this file.
+        If `recalculate==True`: write the data to this file.
+        If not provided, run the calculation and return the correlation data
+        without writing it to a file.
+
+    Returns
+    -------
+
+    """
     # Get z-scores based on getting correlation dataframe
     if method not in ('beta', 't'):
         raise ValueError(f'Unrecognized p-value z-score method {method}. '
                          f'Available methods are beta or t.')
 
+    if recalculate and file_path is not None:
+        n_file_path = _get_filepath(file_path, 'n')
+        logp_file_path = _get_filepath(file_path, 'logp')
+        z_sc_file_path = _get_filepath(file_path, 'z_sc')
+    else:
+        n_file_path = file_path
+        logp_file_path = file_path
+        z_sc_file_path = file_path
+
     # Get sample sizes from get_n
-    n_df = get_n(recalculate=True, data_df=corr_df)
+    n_df = get_n(recalculate=recalculate, data_df=raw_df,
+                 filepath=n_file_path)
 
     # Get logp from get_logp
-    logp_df = get_logp(recalculate=True, data_n=n_df, data_corr=corr_df,
-                       method=method)
+    logp_df = get_logp(recalculate=recalculate, data_n=n_df,
+                       data_corr=corr_df, method=method,
+                       filepath=logp_file_path)
 
     # Get z-scores from get_z
-    z_df = get_z(recalculate=True, data_logp=logp_df, data_corr=corr_df)
+    z_df = get_z(recalculate=recalculate, data_logp=logp_df,
+                 data_corr=corr_df, filepath=z_sc_file_path)
     return z_df
 
 
