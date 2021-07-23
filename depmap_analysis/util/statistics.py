@@ -63,7 +63,7 @@ def get_logp(recalculate: bool, data_n: pd.DataFrame,
         data_logp = pd.DataFrame(logp, columns=data_corr.columns,
                                  index=data_corr.index)
         if filepath is not None:
-            logger.info(f'Saving logp dataframe to {filepath}')
+            logger.info(f'Saving logp dataframe to {"%s.h5" % filepath}')
             data_logp.to_hdf('%s.h5' % filepath, filepath.split('/')[-1])
     else:
         logger.info(f'Reading logp dataframe from file: {filepath}')
@@ -107,7 +107,7 @@ def get_z(recalculate: bool, data_logp: pd.DataFrame, data_corr: pd.DataFrame,
         data_z = data_sign * pd.DataFrame(z_mat, index=data_logp.columns,
                                           columns=data_logp.columns)
         if filepath is not None:
-            logger.info(f'Saving z score dataframe to {filepath}')
+            logger.info(f'Saving z score dataframe to {"%s.h5" % filepath}')
             data_z.to_hdf('%s.h5' % filepath, filepath.split('/')[-1])
     else:
         logger.info(f'Reading z-score dataframe from {filepath}')
@@ -161,6 +161,7 @@ def get_n(recalculate: bool, data_df: pd.DataFrame,
         data_n = pd.DataFrame(n_mat, index=data_df.columns,
                               columns=data_df.columns)
         if filepath is not None:
+            logger.info(f'Saving sampling matrix to {"%s.h5" % filepath}')
             data_n.to_hdf('%s.h5' % filepath, filepath.split('/')[-1])
     else:
         logger.info(f'Reading sampling values from file {filepath}')
