@@ -101,6 +101,34 @@ def run_corr_merge(crispr_raw: Optional[str] = None,
         A data frame containing the combined z-score matrix with NaN's
         removed.
     """
+    def _get_interm_path(raw_fp: Optional[str] = None,
+                         corr_fp: Optional[str] = None,
+                         corr_out_dir: Optional[str] = None,
+                         z_path: Optional[str] = None) -> str:
+        if raw_fp:
+            path = raw_fp
+        elif corr_fp:
+            path = corr_fp
+        elif corr_out_dir:
+            path = corr_out_dir
+        elif z_path:
+            path = z_path
+        else:
+            path = 'intermediate_data'
+
+        # Is it an existing file?
+        if Path(path).is_file():
+            path = Path(path).parent.absolute().as_posix()
+        # Is it a file like path, i.e. ending in '\.*'
+        elif path.split('/')[-1] and '.' in path.split('/')[-1]:
+            # Get the non-punctuated part of the string to the right of the
+            # right-most slash
+            nsplit = path.split('/')[-1].count('.')
+            path = path.rsplit('.', nsplit)[0]
+
+        return path
+
+
     if crispr_raw is None and crispr_corr is None:
         raise ValueError('Need to provide one of crispr_raw or cripsr_corr')
     if rnai_raw is None and rnai_corr is None:
