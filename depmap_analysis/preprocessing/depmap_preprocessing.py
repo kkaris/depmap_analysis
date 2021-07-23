@@ -25,9 +25,6 @@ def run_corr_merge(crispr_raw: Optional[str] = None,
                    crispr_corr: Optional[str] = None,
                    rnai_corr: Optional[str] = None,
                    corr_output_dir: Optional[str] = None,
-                   remove_self_corr: bool = True,
-                   dropna: bool = True,
-                   random_sampl: int = 0,
                    save_corr_files: bool = False,
                    z_corr_path: Optional[str] = None):
     """Return a merged correlation matrix from DepMap data
@@ -653,15 +650,6 @@ if __name__ == '__main__':
                              'provided. Note that s3 URL are not allowed as '
                              'pd.DataFrame.to_hdf does not support urls or '
                              'buffers at the moment.')
-    parser.add_argument('--dropna', action='store_true',
-                        help='If set, drop NaN values after merging the '
-                             'dataframes using `pd.DataFrame.dropna(axis=0, '
-                             'how="all").dropna(axis=1, how="all")`')
-    parser.add_argument('--random', '-r', type=int,
-                        help='Optional. If specified, provide the size of '
-                             'the final correlation matrix where the genes '
-                             'are picked at random from the intersection of '
-                             'genes from both the RNAI and CRISPR data sets.')
     parser.add_argument('--fname',
                         help='A file name for the output correlation '
                              'DataFrame.')
@@ -678,9 +666,6 @@ if __name__ == '__main__':
                             crispr_corr=args.crispr_corr,
                             rnai_corr=args.rnai_corr,
                             corr_output_dir=args.output_dir,
-                            random_sampl=args.random,
-                            remove_self_corr=False,
-                            dropna=args.dropna,
                             save_corr_files=args.save_corr)
 
     # Write merged correlations combined z score
