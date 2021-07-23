@@ -101,71 +101,47 @@ def run_corr_merge(crispr_raw: Optional[str] = None,
         A data frame containing the combined z-score matrix with NaN's
         removed.
     """
-    def _get_interm_path(raw_fp: Optional[str] = None,
-                         corr_fp: Optional[str] = None,
-                         corr_out_dir: Optional[str] = None,
-                         z_path: Optional[str] = None) -> str:
-        if raw_fp:
-            path = raw_fp
-        elif corr_fp:
-            path = corr_fp
-        elif corr_out_dir:
-            path = corr_out_dir
-        elif z_path:
-            path = z_path
-        else:
-            path = 'intermediate_data'
-
-        # Is it an existing file?
-        if Path(path).is_file():
-            path = Path(path).parent.absolute().as_posix()
-        # Is it a file like path, i.e. ending in '\.*'
-        elif path.split('/')[-1] and '.' in path.split('/')[-1]:
-            # Get the non-punctuated part of the string to the right of the
-            # right-most slash
-            nsplit = path.split('/')[-1].count('.')
-            path = path.rsplit('.', nsplit)[0]
-
-        if path.endswith('_'):
-            path = path[:-1]
-
-        return path
-
-
     if crispr_raw is None and crispr_corr is None:
-        raise ValueError('Need to provide one of crispr_raw or cripsr_corr')
+        raise ValueError('Need to provide at least one of crispr_raw or '
+                         'cripsr_corr')
     if rnai_raw is None and rnai_corr is None:
-        raise ValueError('Need to provide one of rnai_raw or rnai_corr')
+        raise ValueError('Need to provide at least one of rnai_raw or '
+                         'rnai_corr')
 
-    # 1. Get correlation matrices
-    crispr_corr_df, rnai_corr_df = _get_corrs(
+    # 1. Get correlation matrices and raw data
+    df_dict = _get_corrs(
         crispr_raw=crispr_raw, rnai_raw=rnai_raw,
         crispr_corr=crispr_corr, rnai_corr=rnai_corr,
         save_corr_files=save_corr_files, corr_output_dir=corr_output_dir
     )
 
     # 2. Get z-scores
+    crispr_interm_path = (
+            _get_interm_path(crispr_raw, crispr_corr, corr_output_dir,
+                             z_corr_path) + '_crispr_'
+    ) if save_corr_files else None
+    rnai_interm_path = (
+        _get_interm_path(rnai_raw, rnai_corr,
+                         corr_output_dir, z_corr_path) + '_rnai_'
+    ) if save_corr_files else None
+    crispr_z_sc = _z_scored(corr=df_dict['crispr_corr'],
+                            raw_df=df_dict['crispr_raw'], method='beta',
+                            recalculate=True, file_path=crispr_interm_path)
+    rnai_z_sc = _z_scored(corr=df_dict['rnai_corr'],
+                          raw_df=df_dict['rnai_raw'], method='beta',
+                          recalculate=True, file_path=rnai_interm_path)
 
     # Merge the correlation matrices
-    z_cm = merge_corr_df(crispr_corr_df, rnai_corr_df, remove_self_corr,
-                         merge_method='stouffer', z_sc_method='beta',
-                         dropna=dropna)
-
-    if random_sampl and random_sampl < len(z_cm.columns):
-        # Get n random rows
-        z_cm = z_cm.sample(n=random_sampl)
-
-        # Make square
-        z_cm = z_cm[list(z_cm.index.values)]
-
-    assert z_cm.notna().sum().sum() > 0, 'Correlation matrix is empty'
+    z_df_merged = _merge_z_corr(zdf=crispr_z_sc, other_z_df=rnai_z_sc,
+                                remove_self_corr=True, dropna=True,
+                                method='stouffer')
 
     if z_corr_path:
         zc_path = Path(z_corr_path)
         zc_path.parent.mkdir(parents=True, exist_ok=True)
-        z_cm.to_hdf(zc_path.absolute().as_posix(), 'corr')
+        z_df_merged.to_hdf(zc_path.absolute().as_posix(), 'corr')
 
-    return z_cm
+    return z_df_merged
 
 
 def drugs_to_corr_matrix(raw_file: str, info_file: str):
