@@ -91,7 +91,9 @@ def run_corr_merge(crispr_raw: Optional[str] = None,
         If True, save the intermediate data frames for both
         crispr and rnai. Default: False.
     z_corr_path :
-        If provided, save the final correlation dataframe here
+        If provided, save the final correlation dataframe here. If
+        `save_corr_file` is True, this value will be set to a default if not
+        provided
 
     Returns
     -------
