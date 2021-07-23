@@ -126,6 +126,9 @@ def run_corr_merge(crispr_raw: Optional[str] = None,
             nsplit = path.split('/')[-1].count('.')
             path = path.rsplit('.', nsplit)[0]
 
+        if path.endswith('_'):
+            path = path[:-1]
+
         return path
 
 
