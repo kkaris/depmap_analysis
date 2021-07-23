@@ -74,16 +74,6 @@ def run_corr_merge(crispr_raw: Optional[str] = None,
         If used, write the correlation matrices to this directory.
         Otherwise they will be written to the same directory as the raw
         input data.
-    remove_self_corr :
-        If True, remove self correlations from the resulting DataFrame.
-        Default: False
-    dropna :
-        If True, drop NaN values after merging the dataframes using
-        `pd.DataFrame.dropna(axis=0, how='all').dropna(axis=1, how='all')`
-    random_sampl :
-        If specified, provides the size of the final correlation matrix
-        where the genes are picked at random from the intersection of genes
-        from both the RNAI and CRISPR data sets.
     save_corr_files :
         If True, save the intermediate data frames for both
         crispr and rnai. Default: False.
