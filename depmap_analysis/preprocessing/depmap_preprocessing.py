@@ -20,11 +20,11 @@ Z_SC_METHODS = ('standard', 't', 'beta')
 PathObj = Union[str, pd.DataFrame]
 
 
-def run_corr_merge(crispr_raw: Optional[PathObj] = None,
-                   rnai_raw: Optional[PathObj] = None,
-                   crispr_corr: Optional[PathObj] = None,
-                   rnai_corr: Optional[PathObj] = None,
-                   corr_output_dir: str = 'correlation_output',
+def run_corr_merge(crispr_raw: Optional[str] = None,
+                   rnai_raw: Optional[str] = None,
+                   crispr_corr: Optional[str] = None,
+                   rnai_corr: Optional[str] = None,
+                   corr_output_dir: Optional[str] = None,
                    remove_self_corr: bool = True,
                    dropna: bool = True,
                    random_sampl: int = 0,
