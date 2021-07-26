@@ -133,8 +133,8 @@ if __name__ == '__main__':
                              'Default is same directory as value of '
                              '--explainer-dir .')
     parser.add_argument('--show-plot', action='store_true',
-                        help='With this flag active, the generated plots '
-                             'will be shown as well as saved')
+                        help='Show the generated plots will be shown as well '
+                             'as saved')
 
     args = parser.parse_args()
     expl_dir: str = args.explainer_dir
