@@ -26,6 +26,9 @@ id_columns = min_columns + ('agA_ns', 'agA_id', 'agB_ns', 'agB_id')
 expl_columns = min_columns + ('expl_type', 'expl_data')
 
 
+__all__ = ['DepMapExplainer', 'min_columns', 'id_columns', 'expl_columns']
+
+
 class DepMapExplainer:
     """Contains the result of matching correlation pairs and an indranet graph
 
