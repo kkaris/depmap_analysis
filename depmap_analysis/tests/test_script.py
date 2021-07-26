@@ -10,30 +10,12 @@ from depmap_analysis.util.io_functions import file_opener
 from depmap_analysis.post_processing import *
 from depmap_analysis.network_functions.depmap_network_functions import \
     corr_matrix_to_generator, get_pairs, get_chunk_size
-from depmap_analysis.scripts.depmap_script2 import _match_correlation_body, \
-    expl_columns, id_columns
+from depmap_analysis.scripts.depmap_script2 import _match_correlation_body
+from depmap_analysis.explainer.depmap_explainer import id_columns, expl_columns
 from depmap_analysis.scripts.depmap_script_expl_funcs import *
 from . import *
 
 reverse_uniprot = {v: k for k, v in uniprot_ids.items()}
-
-
-def _gen_sym_df(size):
-    # Get square, symmetric matrix in dataframe
-    m = np.random.rand(size, size)
-    m = (m + m.T) / 2
-    np.fill_diagonal(m, 1.)
-    return pd.DataFrame(m)
-
-
-def _get_off_diag_pair(max_index: int):
-    if max_index == 0:
-        raise ValueError('Cannot have max_index == 0')
-    r = np.random.randint(0, max_index)
-    c = np.random.randint(0, max_index)
-    while r == c:
-        c = np.random.randint(0, max_index)
-    return r, c
 
 
 def test_df_pair_calc():
@@ -84,27 +66,7 @@ def test_down_sampling():
 
 def test_iterator_slicing():
     size = 50
-    a = _gen_sym_df(size)
-
-    pairs = set()
-    n = 0
-    for n in range(size):
-        k = 0
-        row, col = _get_off_diag_pair(size)
-        while (row, col) in pairs:
-            row, col = _get_off_diag_pair(size)
-            k += 1
-            if k > 1000:
-                print('Too many while iterations, breaking')
-                break
-        if k > 1000:
-            break
-        a.iloc[row, col] = np.nan
-        a.iloc[col, row] = np.nan
-        pairs.add((row, col))
-        pairs.add((col, row))
-
-    pairs_removed = n + 1
+    a, pairs_removed = _get_df_w_nan(size)
 
     # Assert that we're correct so far
 
@@ -178,27 +140,8 @@ def test_iterator_slicing():
 
 def test_sampling():
     size = 50
-    a = _gen_sym_df(size)
+    a, pairs_removed = _get_df_w_nan(size)
 
-    pairs = set()
-    n = 0
-    for n in range(size):
-        k = 0
-        row, col = _get_off_diag_pair(size)
-        while (row, col) in pairs:
-            row, col = _get_off_diag_pair(size)
-            k += 1
-            if k > 1000:
-                print('Too many while iterations, breaking')
-                break
-        if k > 1000:
-            break
-        a.iloc[row, col] = np.nan
-        a.iloc[col, row] = np.nan
-        pairs.add((row, col))
-        pairs.add((col, row))
-
-    pairs_removed = n + 1
     # Assert that we're correct so far
 
     # Get total pairs available:
