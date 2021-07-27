@@ -79,13 +79,15 @@ def main():
                                            sort=False)
         stats_norm.sort_values('range', inplace=True)
 
+        labelsize = 6
         stats_norm.plot(x='filter_w_count',
                         y=labels,
                         legend=legend_labels,
                         kind='bar',
                         title=f'{data_title}, {graph_type.capitalize()}',
                         stacked=False)
-        # plt.xticks(rotation=270)
+        # Set size of tick labels
+        plt.tick_params(axis='x', labelsize=labelsize)
         plt.ylabel('Explained fraction')
         plt.ylim((0, 1))
         plt.savefig(Path(outdir).joinpath(f'{data_title}_{graph_type}.png'))
@@ -100,8 +102,8 @@ def main():
                         title=f'{data_title}, '
                               f'{graph_type.capitalize()} (ylog)',
                         stacked=False)
-        # plt.xticks(rotation=270)
-        plt.ylabel('Explained fracation')
+        plt.tick_params(axis='x', labelsize=labelsize)
+        plt.ylabel('Explained fraction')
         plt.ylim((10 ** -4, 1))
         plt.savefig(
             Path(outdir).joinpath(f'{data_title}_{graph_type}_ylog.png'))
