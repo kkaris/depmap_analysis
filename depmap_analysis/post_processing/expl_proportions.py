@@ -42,8 +42,17 @@ def _get_expl_data(dme: DepMapExplainer) -> Dict[str, Union[str, int, float]]:
     tot = sumd['total checked']
     data = {k: v / tot for k, v in sumd.items() if k in labels}
     lo, hi = dme.sd_range
+    if lo:
+        lon = int(lo) if int(lo) == lo else lo
+    else:
+        lon = lo
+    if hi:
+        hin = str(int(hi)) if int(hi) == float(hi) else hi
+    else:
+        hin = hi
     rand = dme.script_settings['random']
-    data['range'] = 'RND' if rand else (f'{lo}-{hi} SD' if hi else f'{lo}+ SD')
+    data['range'] = 'RND' if rand else \
+        (f'{lon}-{hin} SD' if hin else f'{lon}+ SD')
     data['filter_w_count'] = data['range'] + '\n' + thousands(tot)
 
     return data
