@@ -109,6 +109,16 @@ def main():
             plt.show()
 
 
+def _join(d: str, s: str) -> str:
+    if d.endswith('/') and s.startswith('/'):
+        return d + s[1:]
+    elif d.endswith('/') and not s.startswith('/') or \
+            not d.endswith('/') and s.startswith('/'):
+        return d + s
+    else:
+        return d + '/' + s
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--title', required=True,
@@ -138,7 +148,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     expl_dir: str = args.explainer_dir
-    outdir: str = args.outdir if args.outdir else expl_dir + '/prop_plots'
+    outdir = args.outdir if args.outdir else _join(expl_dir, 'prop_plots')
     logger.info(f'Output path set to {outdir}')
 
     # Create local output path if it doesn't exist
