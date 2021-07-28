@@ -565,7 +565,10 @@ def main(indra_net: Union[str, nx.DiGraph, nx.MultiDiGraph],
         Provide the argparse options from running this file as a script
     """
     global indranet, hgnc_node_mapping, output_list
-    indranet = file_opener(indra_net)
+    if isinstance(indra_net, str):
+        indranet = file_opener(indra_net)
+    else:
+        indranet = indra_net
     assert isinstance(indranet, nx.DiGraph)
 
     assert expl_funcs is None or isinstance(expl_funcs, (list, tuple, set))
