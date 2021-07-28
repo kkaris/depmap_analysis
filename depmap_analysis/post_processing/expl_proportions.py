@@ -56,6 +56,7 @@ def _get_expl_data(dme: DepMapExplainer) -> Dict[str, Union[str, int, float]]:
     data['range'] = 'RND' if rand else \
         (f'{lon}-{hin} SD' if hin else f'{lon}+ SD')
     data['filter_w_count'] = data['range'] + '\n' + thousands(tot)
+    data['x_pos'] = -1 if rand else lon
 
     return data
 
