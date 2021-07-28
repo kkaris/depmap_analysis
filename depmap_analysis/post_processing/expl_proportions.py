@@ -41,7 +41,7 @@ def _get_expl_data(dme: DepMapExplainer) -> Dict[str, Union[str, int, float]]:
     global labels
     sumd = dme.get_summary()
     tot = sumd['total checked']
-    data = {k: v / tot for k, v in sumd.items() if k in labels}
+    data = {k: 100 * v / tot for k, v in sumd.items() if k in labels}
     lo, hi = dme.sd_range
     if lo:
         lon = int(lo) if int(lo) == lo else lo
