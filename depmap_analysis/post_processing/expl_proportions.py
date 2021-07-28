@@ -103,6 +103,7 @@ def main():
                    labels=stats_norm.filter_w_count.values,
                    rotation=90)
         plt.tick_params(axis='x', labelsize=labelsize)
+        plt.xlabel('z-score range (N)')
         plt.ylabel('Explained fraction')
         plt.ylim((0, 1))
         plt.savefig(Path(outdir).joinpath(f'{data_title}_{graph_type}.png'))
@@ -121,6 +122,7 @@ def main():
                    labels=stats_norm.filter_w_count.values,
                    rotation=90)
         plt.tick_params(axis='x', labelsize=labelsize)
+        plt.xlabel('z-score range (N)')
         plt.ylabel('Explained fraction')
         plt.ylim((10 ** -4, 1))
         plt.savefig(
