@@ -92,21 +92,21 @@ def main():
                                            sort=False)
         stats_norm.sort_values('x_pos', inplace=True)
 
-        labelsize = 6
+        # Plot
         stats_norm.plot(x='x_pos',
                         y=labels,
                         legend=legend_labels,
                         kind='line',
                         marker='o',
                         title=f'{data_title}, {graph_type.capitalize()}')
-        plt.xticks(ticks=stats_norm.x_pos.values,
-                   labels=stats_norm.filter_w_count.values,
-                   rotation=90)
-        plt.tick_params(axis='x', labelsize=labelsize)
-        plt.xlabel('z-score range (N)')
-        plt.ylabel('Explained fraction')
-        plt.ylim((0, 1))
-        plt.savefig(Path(outdir).joinpath(f'{data_title}_{graph_type}.png'))
+        ticks = [-1] + list(range(stats_norm.x_pos.values[1],
+                                  stats_norm.x_pos.max() + 2, 2))
+        ticks_labels = ['RND'] + [str(n) for n in ticks[1:]]
+        plt.xticks(ticks=ticks, labels=ticks_labels)
+        plt.xlabel('abs(z-score) lower bound')
+        plt.ylabel('Pct. Corrs. Explained')
+        plt.ylim((0, 100))
+        plt.savefig(Path(outdir).joinpath(f'{data_title}_{graph_type}.pdf'))
         if args.show_plot:
             plt.show()
 
@@ -118,15 +118,12 @@ def main():
                         logy=True,
                         title=f'{data_title}, '
                               f'{graph_type.capitalize()} (ylog)')
-        plt.xticks(ticks=stats_norm.x_pos.values,
-                   labels=stats_norm.filter_w_count.values,
-                   rotation=90)
-        plt.tick_params(axis='x', labelsize=labelsize)
-        plt.xlabel('z-score range (N)')
-        plt.ylabel('Explained fraction')
-        plt.ylim((10 ** -4, 1))
+        plt.xticks(ticks=ticks, labels=ticks_labels)
+        plt.xlabel('abs(z-score) lower bound')
+        plt.ylabel('Pct. Corrs. Explained')
+        plt.ylim((10 ** -2, 10 ** 2))
         plt.savefig(
-            Path(outdir).joinpath(f'{data_title}_{graph_type}_ylog.png'))
+            Path(outdir).joinpath(f'{data_title}_{graph_type}_ylog.pdf'))
         if args.show_plot:
             plt.show()
 
