@@ -617,8 +617,12 @@ def main(indra_net: Union[str, nx.DiGraph, nx.MultiDiGraph],
         elif Path(outname).is_file():
             raise FileExistsError(f'File {str(outname)} already exists!')
 
-    if z_score is not None and Path(z_score).is_file():
-        z_corr = pd.read_hdf(z_score)
+    if z_score is not None:
+        if isinstance(z_score, str):
+            z_corr = pd.read_hdf(z_score)
+        else:
+            z_corr = z_score
+            assert isinstance(z_corr, pd.DataFrame)
     else:
         z_sc_options = {
             'crispr_raw': raw_data[0],
