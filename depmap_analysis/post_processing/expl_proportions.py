@@ -99,7 +99,7 @@ def main():
                         kind='line',
                         marker='o',
                         title=f'{data_title}, {graph_type.capitalize()}')
-        ticks = [-1] + list(range(stats_norm.x_pos.values[1],
+        ticks = [-1] + list(range(int(stats_norm.x_pos.values[1]),
                                   stats_norm.x_pos.max() + 2, 2))
         ticks_labels = ['RND'] + [str(n) for n in ticks[1:]]
         plt.xticks(ticks=ticks, labels=ticks_labels)
