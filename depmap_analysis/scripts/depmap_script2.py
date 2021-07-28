@@ -564,6 +564,18 @@ def main(indra_net: Union[str, nx.DiGraph, nx.MultiDiGraph],
     argparse_dict : Optional[Dict[str, Union[str, float, int, List[str]]]]
         Provide the argparse options from running this file as a script
     """
+    outname = outname if outname.endswith('.pkl') else \
+        outname + '.pkl'
+    if not overwrite:
+        error_msg = f'File {str(outname)} already exists! Set ' \
+                    f'overwrite=True to overwrite.'
+        if outname.startswith('s3://'):
+            s3 = get_s3_client(unsigned=False)
+            if S3Path.from_string(outname).exists(s3):
+                raise FileExistsError(error_msg)
+        elif Path(outname).is_file():
+            raise FileExistsError(error_msg)
+
     global indranet, hgnc_node_mapping, output_list
     if isinstance(indra_net, str):
         indranet = file_opener(indra_net)
@@ -606,16 +618,6 @@ def main(indra_net: Union[str, nx.DiGraph, nx.MultiDiGraph],
 
         logger.info(f'Using explained set with '
                     f'{len(apriori_explained)} entities')
-
-    outname = outname if outname.endswith('.pkl') else \
-        outname + '.pkl'
-    if not overwrite:
-        if outname.startswith('s3://'):
-            s3 = get_s3_client(unsigned=False)
-            if S3Path.from_string(outname).exists(s3):
-                raise FileExistsError(f'File {str(outname)} already exists!')
-        elif Path(outname).is_file():
-            raise FileExistsError(f'File {str(outname)} already exists!')
 
     if z_score is not None:
         if isinstance(z_score, str):
