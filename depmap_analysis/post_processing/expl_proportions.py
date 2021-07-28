@@ -2,6 +2,7 @@ import argparse
 import logging
 from typing import Dict, Union
 
+from natsort import humansorted
 import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
@@ -86,7 +87,16 @@ def main():
             stats_norm = stats_norm.append(other=pd.DataFrame(data=data,
                                                               index=[0]),
                                            sort=False)
-        stats_norm.sort_values('range', inplace=True)
+        sort_values = list(stats_norm.range.values)
+        try:
+            sort_values.remove('RND')
+        except ValueError:
+            pass
+        sort_values = humansorted(sort_values)
+        sort_values = ['RND'] + sort_values
+        stats_norm['sort'] = stats_norm.range.apply(sort_values.index)
+        stats_norm.sort_values('sort', inplace=True)
+        stats_norm.drop('sort', axis=1, inplace=True)
 
         labelsize = 6
         stats_norm.plot(x='filter_w_count',
