@@ -2,9 +2,11 @@ import argparse
 import logging
 from typing import Dict, Union
 
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
+from scipy.special import ndtri_exp
 from depmap_analysis.explainer import DepMapExplainer
 from depmap_analysis.post_processing.util import get_dir_iter
 
@@ -102,10 +104,14 @@ def main():
         ticks = [-1] + list(range(int(stats_norm.x_pos.values[1]),
                                   stats_norm.x_pos.max() + 2, 2))
         ticks_labels = ['RND'] + [str(n) for n in ticks[1:]]
+        fdr_line = abs(ndtri_exp(np.log(0.05)) - np.log(2))
+        fdr_label = 'FDR=|ndtri_exp(ln(.05)-ln(2))|'
         plt.xticks(ticks=ticks, labels=ticks_labels)
         plt.xlabel('abs(z-score) lower bound')
         plt.ylabel('Pct. Corrs. Explained')
         plt.ylim((0, 100))
+        plt.axvline(x=fdr_line, ymax=0.65, color='c', label=fdr_label)
+        plt.legend()
         plt.savefig(Path(outdir).joinpath(f'{data_title}_{graph_type}.pdf'))
         if args.show_plot:
             plt.show()
@@ -122,6 +128,8 @@ def main():
         plt.xlabel('abs(z-score) lower bound')
         plt.ylabel('Pct. Corrs. Explained')
         plt.ylim((10 ** -2, 10 ** 2))
+        plt.axvline(x=fdr_line, ymin=0.35, color='c', label=fdr_label)
+        plt.legend()
         plt.savefig(
             Path(outdir).joinpath(f'{data_title}_{graph_type}_ylog.pdf'))
         if args.show_plot:
