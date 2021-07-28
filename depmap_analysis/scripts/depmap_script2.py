@@ -428,8 +428,8 @@ def error_callback(err):
     logger.exception(err)
 
 
-def main(indra_net: str,
-         z_score: str,
+def main(indra_net: Union[str, nx.DiGraph, nx.MultiDiGraph],
+         z_score: Union[str, pd.DataFrame],
          outname: str,
          graph_type: str,
          sd_range: Tuple[float, Union[None, float]],
