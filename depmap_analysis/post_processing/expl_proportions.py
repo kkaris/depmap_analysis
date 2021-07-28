@@ -93,13 +93,15 @@ def main():
         stats_norm.sort_values('x_pos', inplace=True)
 
         labelsize = 6
-        stats_norm.plot(x='filter_w_count',
+        stats_norm.plot(x='x_pos',
                         y=labels,
                         legend=legend_labels,
-                        kind='bar',
-                        title=f'{data_title}, {graph_type.capitalize()}',
-                        stacked=False)
-        # Set size of tick labels
+                        kind='line',
+                        marker='o',
+                        title=f'{data_title}, {graph_type.capitalize()}')
+        plt.xticks(ticks=stats_norm.x_pos.values,
+                   labels=stats_norm.filter_w_count.values,
+                   rotation=90)
         plt.tick_params(axis='x', labelsize=labelsize)
         plt.ylabel('Explained fraction')
         plt.ylim((0, 1))
@@ -107,14 +109,17 @@ def main():
         if args.show_plot:
             plt.show()
 
-        stats_norm.plot(x='filter_w_count',
+        stats_norm.plot(x='x_pos',
                         y=labels,
                         legend=legend_labels,
-                        kind='bar',
+                        kind='line',
+                        marker='o',
                         logy=True,
                         title=f'{data_title}, '
-                              f'{graph_type.capitalize()} (ylog)',
-                        stacked=False)
+                              f'{graph_type.capitalize()} (ylog)')
+        plt.xticks(ticks=stats_norm.x_pos.values,
+                   labels=stats_norm.filter_w_count.values,
+                   rotation=90)
         plt.tick_params(axis='x', labelsize=labelsize)
         plt.ylabel('Explained fraction')
         plt.ylim((10 ** -4, 1))
