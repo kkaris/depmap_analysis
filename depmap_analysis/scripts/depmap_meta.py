@@ -39,11 +39,12 @@ if __name__ == '__main__':
     # sd ranges
     parser.add_argument(
         '--sd-ranges', type=float, nargs=3, required=True,
-        help='Provide <start> <stop> <# ranges> for SD ranges. Example: '
-             'providing "0 5 5" will give 5 ranges of equal width from 0 to '
-             '5: 0-1, 1-2, 2-3, 3-4, 4-5, while providing "3 8 10" gives 10 '
-             'ranges of width 0.5 from 3 to 8: 3-3.5, 3.5-4, 4-4.5, 4.5-5,'
-             '5-5.5, 5.5-6, 6-6.5, 6.5-7, 7-7.5, 7.5-8'
+        help='Provide <start> <stop> <# ranges> for SD ranges. <# ranges> '
+             'will be made an int via int(). Examples: providing "0 5 5" will '
+             'give 5 ranges of equal width from 0 to 5: 0-1, 1-2, 2-3, 3-4, '
+             '4-5, while providing "3 8 10" gives 10 ranges of width 0.5 '
+             'from 3 to 8: 3-3.5, 3.5-4, 4-4.5, 4.5-5, 5-5.5, 5.5-6, 6-6.5, '
+             '6.5-7, 7-7.5, 7.5-8.'
     )
 
     # do rnd sampling?
@@ -155,7 +156,7 @@ if __name__ == '__main__':
     )
 
     start, end, num = args.sd_ranges
-    ranges = np.linspace(start, end, num + 1)
+    ranges = np.linspace(start, end, int(num) + 1)
     outpath = args.outpath[:-1] if args.outpath.endswith('/') \
         else args.outpath
     outname = f'{args.outpath}/{args.graph_type}_'
