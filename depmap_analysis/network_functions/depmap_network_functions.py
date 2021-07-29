@@ -159,8 +159,10 @@ def corr_matrix_to_generator(z_corr: pd.DataFrame,
         A generator that returns a tuple of each row
     """
 
-    def _matrix_to_stack_gen(corr_z: pd.DataFrame,
-                             sample: bool = False) -> Generator:
+    def _matrix_to_stack_gen(
+            corr_z: pd.DataFrame,
+            sample: bool = False
+    ) -> Union[Iterable, Generator]:
         z_ut = corr_z.where(
             np.triu(np.ones(corr_z.shape), k=1).astype(np.bool))
         stacked: pd.DataFrame = z_ut.stack(dropna=True)
