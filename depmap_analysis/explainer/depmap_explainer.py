@@ -26,6 +26,9 @@ id_columns = min_columns + ('agA_ns', 'agA_id', 'agB_ns', 'agB_id')
 expl_columns = min_columns + ('expl_type', 'expl_data')
 
 
+__all__ = ['DepMapExplainer', 'min_columns', 'id_columns', 'expl_columns']
+
+
 class DepMapExplainer:
     """Contains the result of matching correlation pairs and an indranet graph
 
@@ -262,10 +265,11 @@ class DepMapExplainer:
                         self.stats_df[bxa_colname])
             # count shared regulator as only expl
             if sr_colname in self.stats_df.columns:
-                self.summary['sr only'] = self._get_sr_only()
                 # explained - (shared regulator as only expl)
-                self.summary['explained (excl sr)'] = \
-                    self.summary['explained'] - self.summary['sr only']
+                self.summary['explained (excl sr)'] = self._get_any_excl_sr()
+                self.summary['sr only'] = \
+                    self.summary['explained'] - \
+                    self.summary['explained (excl sr)']
             # Count axb type explanations that does not have reactome,
             # direct/complex or apriori explanations
             if all([cn in self.stats_df.columns for cn in
@@ -340,19 +344,15 @@ class DepMapExplainer:
         s3p_loc_str = s3p_loc.to_string().split('.pkl')[0]
         return s3p_loc_str + '_axb_data.json'
 
-    def _get_sr_only(self):
-        # Get indices where 'shared regulator' is True
-        sr_true = self.stats_df[
-                self.stats_df[sr_colname] == True
-            ].index.values
-        # Exclude overall explained and shared regulator
-        other_cols = [col for col in self.expl_cols if col not in
-                      {sr_colname, 'explained'}]
-        others_false = self.stats_df[
-                self.stats_df[other_cols] == False
-            ].index.values
-
-        return len(set(sr_true).intersection(others_false))
+    def _get_any_excl_sr(self) -> int:
+        # Count explanations where any explanation column is True, while
+        # excluding shared regulators, explained and not in graph.
+        other_cols = list(set(self.expl_cols).difference(
+            {sr_colname, 'explained', 'not_in_graph'}))
+        count = self.stats_df.query(
+            ' | '.join([f'{c} == True' for c in other_cols])
+        ).pair.count()
+        return count
 
     def _get_axb_type_no_react(self):
         df = self._filter_stats_to_interesting()

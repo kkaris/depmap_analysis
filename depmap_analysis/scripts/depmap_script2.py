@@ -51,8 +51,8 @@ from depmap_analysis.util.io_functions import file_opener, \
     dump_it_to_pickle, allowed_types, file_path
 from depmap_analysis.network_functions.depmap_network_functions import \
     get_pairs, get_chunk_size, corr_matrix_to_generator
-from depmap_analysis.explainer.depmap_explainer import min_columns, \
-    id_columns, expl_columns, DepMapExplainer
+from depmap_analysis.explainer import min_columns, id_columns, expl_columns, \
+    DepMapExplainer
 from depmap_analysis.preprocessing import *
 from depmap_analysis.scripts.depmap_script_expl_funcs import *
 
@@ -428,8 +428,8 @@ def error_callback(err):
     logger.exception(err)
 
 
-def main(indra_net: str,
-         z_score: str,
+def main(indra_net: Union[str, nx.DiGraph, nx.MultiDiGraph],
+         z_score: Union[str, pd.DataFrame],
          outname: str,
          graph_type: str,
          sd_range: Tuple[float, Union[None, float]],
@@ -564,8 +564,23 @@ def main(indra_net: str,
     argparse_dict : Optional[Dict[str, Union[str, float, int, List[str]]]]
         Provide the argparse options from running this file as a script
     """
+    outname = outname if outname.endswith('.pkl') else \
+        outname + '.pkl'
+    if not overwrite:
+        error_msg = f'File {str(outname)} already exists! Set ' \
+                    f'overwrite=True to overwrite.'
+        if outname.startswith('s3://'):
+            s3 = get_s3_client(unsigned=False)
+            if S3Path.from_string(outname).exists(s3):
+                raise FileExistsError(error_msg)
+        elif Path(outname).is_file():
+            raise FileExistsError(error_msg)
+
     global indranet, hgnc_node_mapping, output_list
-    indranet = file_opener(indra_net)
+    if isinstance(indra_net, str):
+        indranet = file_opener(indra_net)
+    else:
+        indranet = indra_net
     assert isinstance(indranet, nx.DiGraph)
 
     assert expl_funcs is None or isinstance(expl_funcs, (list, tuple, set))
@@ -604,18 +619,12 @@ def main(indra_net: str,
         logger.info(f'Using explained set with '
                     f'{len(apriori_explained)} entities')
 
-    outname = outname if outname.endswith('.pkl') else \
-        outname + '.pkl'
-    if not overwrite:
-        if outname.startswith('s3://'):
-            s3 = get_s3_client(unsigned=False)
-            if S3Path.from_string(outname).exists(s3):
-                raise FileExistsError(f'File {str(outname)} already exists!')
-        elif Path(outname).is_file():
-            raise FileExistsError(f'File {str(outname)} already exists!')
-
-    if z_score is not None and Path(z_score).is_file():
-        z_corr = pd.read_hdf(z_score)
+    if z_score is not None:
+        if isinstance(z_score, str):
+            z_corr = pd.read_hdf(z_score)
+        else:
+            z_corr = z_score
+            assert isinstance(z_corr, pd.DataFrame)
     else:
         z_sc_options = {
             'crispr_raw': raw_data[0],
@@ -645,25 +654,24 @@ def main(indra_net: str,
 
     # 2. Filter to SD range OR run random sampling
     if random:
-        logger.info('Doing random sampling with 50k pairs. Resetting '
-                    'z-scores to +/-0.1')
         sample_size = 50000
-        # Remove correlation values to not confuse with real data
-        z_corr[z_corr < 0] = -0.1
-        z_corr[z_corr > 0] = 0.1
+        logger.info(f'Doing random sampling with {sample_size} pairs')
+        z_filt = z_corr
     else:
-        if sd_l and sd_u:
+        if isinstance(sd_l, (int, float)) and isinstance(sd_u, (int, float)):
             logger.info(f'Filtering correlations to {sd_l} - {sd_u} SD')
-            z_corr = z_corr[((z_corr.abs() > sd_l) & (z_corr.abs() < sd_u))]
-        elif isinstance(sd_l, (int, float)) and sd_l and not sd_u:
+            z_filt = z_corr[((z_corr.abs() > sd_l) & (z_corr.abs() < sd_u))]
+        elif isinstance(sd_l, (int, float)) and sd_u is None:
             logger.info(f'Filtering correlations to {sd_l}+ SD')
-            z_corr = z_corr[z_corr.abs() > sd_l]
+            z_filt = z_corr[z_corr.abs() > sd_l]
+        else:
+            raise ValueError('Check SD ranges')
 
     sd_range = (sd_l, sd_u) if sd_u else (sd_l, None)
 
     if normalize_names:
         logger.info('Normalizing correlation matrix column names')
-        z_corr = normalize_corr_names(z_corr, indranet)
+        z_filt = normalize_corr_names(z_filt, indranet)
     else:
         logger.info('Leaving correlation matrix column names as is')
 
@@ -676,7 +684,7 @@ def main(indra_net: str,
     script_settings = {
         'raw_data': raw_data,
         'raw_corr': raw_corr,
-        'z_score': z_score,
+        'z_score': z_score if isinstance(z_score, str) else '(unknown)',
         'random': random,
         'indranet': indra_net,
         'shuffle': shuffle,
@@ -694,7 +702,7 @@ def main(indra_net: str,
     # Create output list in global scope
     output_list = []
     explanations = match_correlations(
-        corr_z=z_corr,
+        corr_z=z_filt,
         sd_range=sd_range,
         script_settings=script_settings,
         graph_filepath=indra_net,
