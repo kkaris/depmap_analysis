@@ -7,7 +7,8 @@ from typing import Optional
 
 import pandas as pd
 
-from depmap_analysis.util.io_functions import file_opener, allowed_types, file_path
+from depmap_analysis.util.io_functions import file_opener, allowed_types, \
+    file_path
 from depmap_analysis.scripts.depmap_script2 import main
 
 
@@ -15,16 +16,16 @@ def _get_outfile_name(
     prefix: str, lo_sd: Optional[float] = None, hi_sd: Optional[float] = None
 ) -> str:
     # Closed range
-    if lo_sd and hi_sd:
+    if lo_sd is not None and hi_sd is not None:
         return (
             f'{prefix}_{str(lo_sd).replace(".", "")}_'
             f'{str(hi_sd).replace(".", "")}.pkl'
         )
     # Open range upwards
-    elif lo_sd and hi_sd is None:
+    elif lo_sd is not None and hi_sd is None:
         return f'{prefix}_{str(lo_sd).replace(".", "")}_.pkl'
     # Open range downwards
-    elif lo_sd is None and hi_sd:
+    elif lo_sd is None and hi_sd is not None:
         return f'{prefix}__{str(hi_sd).replace(".", "")}.pkl'
     # Random
     elif lo_sd is None and hi_sd is None:
