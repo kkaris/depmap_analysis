@@ -658,10 +658,10 @@ def main(indra_net: Union[str, nx.DiGraph, nx.MultiDiGraph],
         logger.info(f'Doing random sampling with {sample_size} pairs')
         z_filt = z_corr
     else:
-        if sd_l and sd_u:
+        if isinstance(sd_l, (int, float)) and isinstance(sd_u, (int, float)):
             logger.info(f'Filtering correlations to {sd_l} - {sd_u} SD')
             z_filt = z_corr[((z_corr.abs() > sd_l) & (z_corr.abs() < sd_u))]
-        elif isinstance(sd_l, (int, float)) and not sd_u:
+        elif isinstance(sd_l, (int, float)) and sd_u is None:
             logger.info(f'Filtering correlations to {sd_l}+ SD')
             z_filt = z_corr[z_corr.abs() > sd_l]
         else:
