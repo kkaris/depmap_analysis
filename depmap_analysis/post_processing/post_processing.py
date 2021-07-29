@@ -102,6 +102,8 @@ def _check_hashes(a: str, x: str, b: str, ab_corr: float,
         raise ValueError(f'Unrecognized explanation type {expl_type}')
 
     x_ns, x_id = '', ''
+    x_deg = 0
+    # x_cent = 0
     # If signed
     if G.is_multigraph():
         p, m = 0, 1
@@ -131,6 +133,11 @@ def _check_hashes(a: str, x: str, b: str, ab_corr: float,
                 bx_edge_data.append(bx_dict['types'])
                 x_ns: str = G.nodes[x]['ns']
                 x_id: str = G.nodes[x]['id']
+                x_deg = G.degree(x)
+
+                # Check out
+                # https://networkx.org/documentation/stable/reference/algorithms/centrality.html
+                # x_cent =
 
             except NotInGraph:
                 continue
@@ -150,6 +157,8 @@ def _check_hashes(a: str, x: str, b: str, ab_corr: float,
             bx_edge_data = bx_dict['types']
             x_ns: str = G.nodes[x]['ns']
             x_id: str = G.nodes[x]['id']
+            x_deg = G.degree(x)
+            # x_cent =
         except NotInGraph:
             ax_edge_data = {}
             bx_edge_data = {}
@@ -157,7 +166,7 @@ def _check_hashes(a: str, x: str, b: str, ab_corr: float,
             bx_belief = None
 
     if ax_edge_data and bx_edge_data:
-        return {'agX_ns': x_ns, 'agX_id': x_id,
+        return {'agX_ns': x_ns, 'agX_id': x_id, 'agX_degree': x_deg,
                 'ax_belief': ax_belief, 'bx_belief': bx_belief,
                 'ax_data': ax_edge_data, 'bx_data': bx_edge_data}
     return {}
@@ -223,6 +232,7 @@ def _get_df_per_key(key: str, stats_df: pd.DataFrame, expl_df: pd.DataFrame,
             rows_dict['agX'].append(x)
             rows_dict['agX_ns'].append(edge_dict['agX_ns'])
             rows_dict['agX_id'].append(edge_dict['agX_id'])
+            rows_dict['agX_degree'].append(edge_dict['agX_degree'])
             rows_dict['ax_corr'].append(ax_corr)
             rows_dict['bx_corr'].append(bx_corr)
             rows_dict['ax_belief'].append(edge_dict['ax_belief'])
@@ -275,8 +285,8 @@ def get_non_reactome_axb_expl_df(graph: Union[DiGraph, MultiDiGraph],
     # Loop AB given from outside, then collect the columns:
     columns = ('pair', 'agA', 'agB', 'z_score', 'agA_ns', 'agA_id',
                'agB_ns', 'agB_id', 'expl_type', 'agX', 'agX_ns', 'agX_id',
-               'ax_corr', 'bx_corr', 'ax_belief', 'bx_belief', 'ax_data',
-               'bx_data')
+               'agX_degree', 'ax_corr', 'bx_corr', 'ax_belief', 'bx_belief',
+               'ax_data', 'bx_data')
     results: Dict[str, List] = {c: [] for c in columns}
     counters = []
     for key in ab_keys:
@@ -287,6 +297,7 @@ def get_non_reactome_axb_expl_df(graph: Union[DiGraph, MultiDiGraph],
 
         # Append the data to its list
         if rows_data:
+            counters.append(skips_counter)
             for k, dl in results.items():
                 dl.extend(rows_data[k])
 
@@ -294,6 +305,6 @@ def get_non_reactome_axb_expl_df(graph: Union[DiGraph, MultiDiGraph],
     if any(all_skip.values()):
         for skip, count in all_skip.items():
             if count > 0:
-                logger.warning(f'Skipped {skip} {count} times')
+                logger.warning(f'{count} {skip} skips performed')
 
     return pd.DataFrame(data=results)
