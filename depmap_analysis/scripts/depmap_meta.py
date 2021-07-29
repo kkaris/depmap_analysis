@@ -1,6 +1,8 @@
 """
 Run depmap script on multiple ranges of z-scores
 """
+import logging
+
 import numpy as np
 import argparse
 from typing import Optional
@@ -10,6 +12,9 @@ import pandas as pd
 from depmap_analysis.util.io_functions import file_opener, allowed_types, \
     file_path
 from depmap_analysis.scripts.depmap_script2 import main
+
+
+logger = logging.getLogger(__name__)
 
 
 def _get_outfile_name(
@@ -140,7 +145,9 @@ if __name__ == "__main__":
     graph = file_opener(args.graph)
 
     # Load corr
+    logger.info(f"Loading z-score dataframe {args.z_score}")
     z_corr = pd.read_hdf(args.z_score)
+    logger.info("Done loading dataframe")
 
     # Set kwargs
     kwargs = dict(
