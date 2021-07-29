@@ -18,6 +18,23 @@ class NotInGraph(Exception):
 
 
 def filter_to_interesting(stats_df: pd.DataFrame) -> pd.DataFrame:
+    """Filter the stats_df of the depmap script to a specific interaction set
+
+    Filters the stats_df data frame so that only the rows with any of shared
+    targets, a->x->b or b->x->a are explained but none of apriori,
+    a-b direct/complexes or reactome pathway members.
+
+    Parameters
+    ----------
+    :
+        The stats dataframe of
+        `depmap_analysis.explainer.DepMapExplainer.stats_df`
+
+    Returns
+    -------
+    :
+        The filtered dataframe
+    """
     or_columns = [st_colname, axb_colname, bxa_colname]
     and_columns = [apriori_colname, ab_colname, ba_colname, react_colname]
 
