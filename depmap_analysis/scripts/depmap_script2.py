@@ -654,25 +654,24 @@ def main(indra_net: Union[str, nx.DiGraph, nx.MultiDiGraph],
 
     # 2. Filter to SD range OR run random sampling
     if random:
-        logger.info('Doing random sampling with 50k pairs. Resetting '
-                    'z-scores to +/-0.1')
         sample_size = 50000
-        # Remove correlation values to not confuse with real data
-        z_corr[z_corr < 0] = -0.1
-        z_corr[z_corr > 0] = 0.1
+        logger.info(f'Doing random sampling with {sample_size} pairs')
+        z_filt = z_corr
     else:
         if sd_l and sd_u:
             logger.info(f'Filtering correlations to {sd_l} - {sd_u} SD')
-            z_corr = z_corr[((z_corr.abs() > sd_l) & (z_corr.abs() < sd_u))]
+            z_filt = z_corr[((z_corr.abs() > sd_l) & (z_corr.abs() < sd_u))]
         elif isinstance(sd_l, (int, float)) and sd_l and not sd_u:
             logger.info(f'Filtering correlations to {sd_l}+ SD')
-            z_corr = z_corr[z_corr.abs() > sd_l]
+            z_filt = z_corr[z_corr.abs() > sd_l]
+        else:
+            raise ValueError('Check SD ranges')
 
     sd_range = (sd_l, sd_u) if sd_u else (sd_l, None)
 
     if normalize_names:
         logger.info('Normalizing correlation matrix column names')
-        z_corr = normalize_corr_names(z_corr, indranet)
+        z_filt = normalize_corr_names(z_filt, indranet)
     else:
         logger.info('Leaving correlation matrix column names as is')
 
@@ -685,7 +684,7 @@ def main(indra_net: Union[str, nx.DiGraph, nx.MultiDiGraph],
     script_settings = {
         'raw_data': raw_data,
         'raw_corr': raw_corr,
-        'z_score': z_score,
+        'z_score': z_score if isinstance(z_score, str) else '(unknown)',
         'random': random,
         'indranet': indra_net,
         'shuffle': shuffle,
@@ -703,7 +702,7 @@ def main(indra_net: Union[str, nx.DiGraph, nx.MultiDiGraph],
     # Create output list in global scope
     output_list = []
     explanations = match_correlations(
-        corr_z=z_corr,
+        corr_z=z_filt,
         sd_range=sd_range,
         script_settings=script_settings,
         graph_filepath=indra_net,
