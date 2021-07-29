@@ -74,7 +74,7 @@ def _get_df_w_nan(size: int = 50,
                   nan_count: int = 50) -> Tuple[pd.DataFrame, int]:
     """Return symmetric dataframe with some NaNs"""
     # Cannot remove more than a full off-diagonal triangle of the matrix
-    remove = min(nan_count, (size**2 - size) / 2)
+    remove = min(nan_count, int((size**2 - size) / 2))
     a = _gen_sym_df(size)
 
     pairs = set()
