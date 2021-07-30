@@ -185,7 +185,14 @@ if __name__ == "__main__":
 
     for lo, hi in zip(ranges[:-1], ranges[1:]):
         outfile = _get_outfile_name(outname, lo, hi)
-        main(sd_range=(lo, hi), random=False, outname=outfile, **kwargs)
+        try:
+            main(sd_range=(lo, hi), random=False, outname=outfile, **kwargs)
+        except FileExistsError as err:
+            logger.exception(err)
+            logger.error(f'Script running on range {lo}-{hi} failed. Output '
+                         f'seems to exist already. Use flag --overwrite to '
+                         f'force a new script run.')
+            continue
 
     # Run last range as open ended
     if args.open_range:
