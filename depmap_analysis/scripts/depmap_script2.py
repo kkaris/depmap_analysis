@@ -686,7 +686,9 @@ def main(indra_net: Union[str, nx.DiGraph, nx.MultiDiGraph],
         'raw_corr': raw_corr,
         'z_score': z_score if isinstance(z_score, str) else '(unknown)',
         'random': random,
-        'indranet': indra_net,
+        'indranet': indra_net if isinstance(indra_net, str) else 'graph '
+                                                                 'provided '
+                                                                 'directly',
         'shuffle': shuffle,
         'sample_size': sample_size,
         'n_chunks': n_chunks,
