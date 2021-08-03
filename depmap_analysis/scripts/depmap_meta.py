@@ -1,5 +1,7 @@
 """
-Run depmap script on multiple ranges of z-scores
+Run depmap script on multiple ranges of z-scores and optionally on an open
+ended range with the highest z-score as lower bound and/or a random sampling
+of all participating entities in the correlation matrix.
 """
 import logging
 
