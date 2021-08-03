@@ -283,9 +283,7 @@ class DepMapExplainer:
             if sr_colname in self.stats_df.columns:
                 # explained - (shared regulator as only expl)
                 self.summary["explained (excl sr)"] = self._get_any_excl_sr()
-                self.summary["sr only"] = (
-                    self.summary["explained"] - self.summary["explained (excl sr)"]
-                )
+                self.summary["sr only"] = self._get_sr_only()
             # Count axb type explanations that does not have reactome,
             # direct/complex or apriori explanations
             if all(
@@ -380,10 +378,26 @@ class DepMapExplainer:
         # Count explanations where any explanation column is True, while
         # excluding shared regulators, explained and not in graph.
         other_cols = list(
-            set(self.expl_cols).difference({sr_colname, "explained", "not_in_graph"})
+            set(self.expl_cols).difference(
+                {sr_colname, "explained", "not_in_graph"}
+            )
         )
         count = self.stats_df.query(
             " | ".join([f"{c} == True" for c in other_cols])
+        ).pair.count()
+        return count
+
+    def _get_sr_only(self) -> int:
+        # Count explanations where sr is the only explanation:
+        # explained == True & sr == True & all others == False
+        other_cols = list(
+            set(self.expl_cols).difference(
+                {sr_colname, "explained", "not_in_graph"}
+            )
+        )
+        count = self.stats_df.query(
+            " & ".join([f"{c} == False" for c in other_cols])
+            + f" & {sr_colname} == True"
         ).pair.count()
         return count
 
