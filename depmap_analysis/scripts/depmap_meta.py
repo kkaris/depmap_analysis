@@ -11,6 +11,7 @@ import pandas as pd
 
 from depmap_analysis.util.io_functions import file_opener, allowed_types, \
     file_path
+from depmap_analysis.post_processing.expl_proportions import _join
 from depmap_analysis.scripts.depmap_script2 import main
 
 
@@ -182,8 +183,7 @@ if __name__ == "__main__":
 
     start, end, num = args.sd_ranges
     ranges = np.linspace(start, end, int(num) + 1)
-    outpath = args.outpath[:-1] if args.outpath.endswith("/") else args.outpath
-    outname = f"{args.outpath}/{args.graph_type}_"
+    outname = _join(args.outpath, args.graph_type)
 
     for lo, hi in zip(ranges[:-1], ranges[1:]):
         outfile = _get_outfile_name(outname, lo, hi)
