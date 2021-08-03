@@ -455,7 +455,9 @@ def main(indra_net: Union[str, nx.DiGraph, nx.MultiDiGraph],
          overwrite: Optional[bool] = False,
          normalize_names: Optional[bool] = False,
          argparse_dict: Optional[Dict[str, Union[str, float, int,
-                                                 List[str]]]] = None):
+                                                 List[str]]]] = None,
+         indra_net_path: Optional[str] = None,
+         z_score_path: Optional[str] = None):
     """Set up correlation matching of depmap data with an indranet graph
 
     Parameters
@@ -563,6 +565,11 @@ def main(indra_net: Union[str, nx.DiGraph, nx.MultiDiGraph],
         are not found in the provided graph. Default: False.
     argparse_dict : Optional[Dict[str, Union[str, float, int, List[str]]]]
         Provide the argparse options from running this file as a script
+    indra_net_path:
+        Optionally provide the graph path if a graph was privded with indra_net
+    z_score_path:
+        Optionally provide the path to the z scored correlation if a
+        dataframe was provided with z_score
     """
     outname = outname if outname.endswith('.pkl') else \
         outname + '.pkl'
@@ -684,11 +691,11 @@ def main(indra_net: Union[str, nx.DiGraph, nx.MultiDiGraph],
     script_settings = {
         'raw_data': raw_data,
         'raw_corr': raw_corr,
-        'z_score': z_score if isinstance(z_score, str) else '(unknown)',
+        'z_score': z_score if isinstance(z_score, str) else
+        (z_score_path if z_score_path else '(unknown)'),
         'random': random,
-        'indranet': indra_net if isinstance(indra_net, str) else 'graph '
-                                                                 'provided '
-                                                                 'directly',
+        'indranet': indra_net if isinstance(indra_net, str) else
+        (indra_net_path if indra_net_path else '(unknown)'),
         'shuffle': shuffle,
         'sample_size': sample_size,
         'n_chunks': n_chunks,
