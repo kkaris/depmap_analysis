@@ -32,7 +32,7 @@ def _get_outfile_name(
         return f'{prefix}_{str(lo_sd).replace(".", "")}_.pkl'
     # Open range downwards
     elif lo_sd is None and hi_sd is not None:
-        return f'{prefix}__{str(hi_sd).replace(".", "")}.pkl'
+        return f'{prefix}_{str(hi_sd).replace(".", "")}.pkl'
     # Random
     elif lo_sd is None and hi_sd is None:
         return f"{prefix}_rnd.pkl"
