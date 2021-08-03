@@ -70,7 +70,7 @@ def apriori_explained(s: str, o: str, corr: float,
     why_s = expl_mapping.get(s)
     why_o = expl_mapping.get(o)
 
-    if why_s or why_o:
+    if why_s and why_o:
         explanation = f'{s}: {why_s}, {o}: {why_o}'
         return s, o, True, explanation
     else:
