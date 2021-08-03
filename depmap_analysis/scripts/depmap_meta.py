@@ -176,6 +176,8 @@ if __name__ == "__main__":
         shuffle=True,
         overwrite=args.overwrite,
         normalize_names=False,
+        indra_net_path=args.graph,
+        z_score_path=args.z_score,
     )
 
     start, end, num = args.sd_ranges
