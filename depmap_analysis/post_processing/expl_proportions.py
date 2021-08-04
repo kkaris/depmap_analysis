@@ -1,5 +1,6 @@
 import argparse
 import logging
+from tqdm import tqdm
 from typing import Dict, Union
 
 import numpy as np
@@ -67,7 +68,7 @@ def _loop_explainers(expl_path: str):
     expl_by_type = {'pybel': [],
                     'signed': [],
                     'unsigned': []}
-    for explainer_file in get_dir_iter(expl_path, '.pkl'):
+    for explainer_file in tqdm(get_dir_iter(expl_path, '.pkl')):
         expl: DepMapExplainer = file_opener(explainer_file)
         expl_data = _get_expl_data(expl)
         expl_by_type[expl.script_settings['graph_type']].append(expl_data)
@@ -76,7 +77,7 @@ def _loop_explainers(expl_path: str):
 
 
 def main():
-
+    logger.info('Extracting data from explainers')
     expl_data = _loop_explainers(expl_dir)
 
     # Per graph type, extract what the old code has
@@ -84,6 +85,7 @@ def main():
         if len(list_of_expl_data) == 0:
             logger.info(f'Skipping graph type {graph_type}')
             continue
+        logger.info(f'Plotting for graph type {graph_type}')
         stats_norm = pd.DataFrame(
             columns=['range', 'filter_w_count', 'x_pos'] + labels
         )
@@ -112,7 +114,9 @@ def main():
         plt.ylim((0, 100))
         plt.axvline(x=fdr_line, ymax=0.65, color='c', label=fdr_label)
         plt.legend()
-        plt.savefig(Path(outdir).joinpath(f'{data_title}_{graph_type}.pdf'))
+        fpath = Path(outdir).joinpath(f'{data_title}_{graph_type}.pdf')
+        logger.info(f'Saving plot output to {fpath}')
+        plt.savefig(fpath)
         if args.show_plot:
             plt.show()
 
