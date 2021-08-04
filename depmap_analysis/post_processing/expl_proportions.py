@@ -104,7 +104,7 @@ def main():
                         marker='o',
                         title=f'{data_title}, {graph_type.capitalize()}')
         ticks = [-1] + list(range(int(stats_norm.x_pos.values[1]),
-                                  stats_norm.x_pos.max() + 2, 2))
+                                  int(stats_norm.x_pos.max()) + 2, 2))
         ticks_labels = ['RND'] + [str(n) for n in ticks[1:]]
         fdr_line = abs(ndtri_exp(np.log(0.05)) - np.log(2))
         fdr_label = 'FDR=|ndtri_exp(ln(.05)-ln(2))|'
