@@ -36,15 +36,15 @@ def _get_outfile_name(
     # Closed range
     if lo_sd is not None and hi_sd is not None:
         return (
-            f'{prefix}_{_get_int_if_int(lo_sd)}_'
-            f'{_get_int_if_int(hi_sd)}.pkl'
+            f"{prefix}_{_get_int_if_int(lo_sd)}_"
+            f"{_get_int_if_int(hi_sd)}.pkl"
         )
     # Open range upwards
     elif lo_sd is not None and hi_sd is None:
-        return f'{prefix}_{_get_int_if_int(lo_sd)}_.pkl'
+        return f"{prefix}_{_get_int_if_int(lo_sd)}_.pkl"
     # Open range downwards
     elif lo_sd is None and hi_sd is not None:
-        return f'{prefix}_{_get_int_if_int(hi_sd)}.pkl'
+        return f"{prefix}_{_get_int_if_int(hi_sd)}.pkl"
     # Random
     elif lo_sd is None and hi_sd is None:
         return f"{prefix}_rnd.pkl"
