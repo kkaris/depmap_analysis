@@ -590,6 +590,9 @@ def main(indra_net: Union[str, nx.DiGraph, nx.MultiDiGraph],
         indranet = indra_net
     assert isinstance(indranet, nx.DiGraph)
 
+    graph_path: str = indra_net if isinstance(indra_net, str) else (
+        indra_net_path if indra_net_path else '(unknown)')
+
     assert expl_funcs is None or isinstance(expl_funcs, (list, tuple, set))
 
     # 1 Check options
@@ -638,9 +641,12 @@ def main(indra_net: Union[str, nx.DiGraph, nx.MultiDiGraph],
             'rnai_raw': raw_data[1],
             'crispr_corr': raw_corr[0],
             'rnai_corr': raw_corr[1],
-            'z_corr_path': z_score
+            'z_corr_path': z_score if isinstance(z_score, str) else None
         }
         z_corr = run_corr_merge(**z_sc_options)
+
+    z_path: str = z_score if isinstance(z_score, str) else \
+        (z_score_path if z_score_path else '(unknown)')
 
     if reactome_path:
         up2path, _, pathid2pathname = file_opener(reactome_path)
@@ -691,11 +697,9 @@ def main(indra_net: Union[str, nx.DiGraph, nx.MultiDiGraph],
     script_settings = {
         'raw_data': raw_data,
         'raw_corr': raw_corr,
-        'z_score': z_score if isinstance(z_score, str) else
-        (z_score_path if z_score_path else '(unknown)'),
+        'z_score': z_path,
         'random': random,
-        'indranet': indra_net if isinstance(indra_net, str) else
-        (indra_net_path if indra_net_path else '(unknown)'),
+        'indranet': graph_path,
         'shuffle': shuffle,
         'sample_size': sample_size,
         'n_chunks': n_chunks,
@@ -714,8 +718,8 @@ def main(indra_net: Union[str, nx.DiGraph, nx.MultiDiGraph],
         corr_z=z_filt,
         sd_range=sd_range,
         script_settings=script_settings,
-        graph_filepath=indra_net,
-        z_corr_filepath=z_score,
+        graph_filepath=graph_path,
+        z_corr_filepath=z_path,
         apriori_explained=apriori_explained,
         graph_type=graph_type,
         allowed_ns=allowed_ns,
