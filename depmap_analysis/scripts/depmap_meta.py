@@ -23,18 +23,28 @@ logger = logging.getLogger(__name__)
 def _get_outfile_name(
     prefix: str, lo_sd: Optional[float] = None, hi_sd: Optional[float] = None
 ) -> str:
+    def _get_int_if_int(n: float) -> str:
+        # If like int, e.g. 7.0 == 7
+        if int(n) == n:
+            return str(int(n))
+        # Else
+        else:
+            # Make str and remove ".", then remove
+            s = str(n).replace(".", "")
+            return s
+
     # Closed range
     if lo_sd is not None and hi_sd is not None:
         return (
-            f'{prefix}_{str(lo_sd).replace(".", "")}_'
-            f'{str(hi_sd).replace(".", "")}.pkl'
+            f'{prefix}_{_get_int_if_int(lo_sd)}_'
+            f'{_get_int_if_int(hi_sd)}.pkl'
         )
     # Open range upwards
     elif lo_sd is not None and hi_sd is None:
-        return f'{prefix}_{str(lo_sd).replace(".", "")}_.pkl'
+        return f'{prefix}_{_get_int_if_int(lo_sd)}_.pkl'
     # Open range downwards
     elif lo_sd is None and hi_sd is not None:
-        return f'{prefix}_{str(hi_sd).replace(".", "")}.pkl'
+        return f'{prefix}_{_get_int_if_int(hi_sd)}.pkl'
     # Random
     elif lo_sd is None and hi_sd is None:
         return f"{prefix}_rnd.pkl"
