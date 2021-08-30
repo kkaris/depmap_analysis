@@ -345,6 +345,28 @@ def sif_dump_df_merger(df: pd.DataFrame,
     return merged_df
 
 
+def add_corrs(corr_df: pd.DataFrame, merged_df: pd.DataFrame):
+    logger.info('Getting available hgnc symbols from correlation matrix')
+    corr_symb_set = set(corr_df.columns.values)
+    logger.info('Stacking the correlation matrix: may take a couple of '
+                'minutes and tens of GiB of memory')
+    stacked_corr_df = corr_df.stack(
+        dropna=True
+    ).to_frame(
+        name='z_score',
+    ).reset_index(inplace=True).rename(
+        columns={'level_0': 'agA_name', 'level_1': 'agB_name'}
+    )
+    # Merge in stacked correlations to the sif df
+    logger.info('Merging correlations into sif dataframe')
+    merged_df = merged_df.merge(right=stacked_corr_df, how='left')
+    # z_score: original z-score or 0 if nonexistant
+    merged_df['z_score'][merged_df.z_score.isna()] = 0
+    # corr_weight: max(abs(z-score)) + 1 - corr
+    self_corr = corr_df.iloc[0, 0]  # Should get self correlation
+    merged_df['corr_weight'] = self_corr - merged_df.z_score.abs()
+
+
 def sif_dump_df_to_digraph(df: Union[pd.DataFrame, str],
                            date: str,
                            mesh_id_dict: Optional[Dict] = None,
