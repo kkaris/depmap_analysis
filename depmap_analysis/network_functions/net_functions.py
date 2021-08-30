@@ -238,8 +238,9 @@ def sif_dump_df_merger(df: pd.DataFrame,
                        sign_dict: Optional[Dict[str, int]] = None,
                        stmt_types: Optional[List[str]] = None,
                        mesh_id_dict: Optional[Dict[str, str]] = None,
-                       set_weights: Optional[bool] = True,
-                       verbosity: Optional[int] = 0):
+                       set_weights: bool = True,
+                       z_sc_df: Optional[pd.DataFrame] = None,
+                       verbosity: int = 0):
     """Merge the sif dump df with the provided dictionaries
 
     Parameters
@@ -265,6 +266,9 @@ def sif_dump_df_merger(df: pd.DataFrame,
         common PMID
     set_weights : bool
         If True, set the edge weights. Default: True.
+    z_sc_df:
+        If provided, must be a square dataframe with HGNC symbols as names on
+        the axes and floats as entries
     verbosity : int
         Output various extra messages if > 1.
 
@@ -284,6 +288,7 @@ def sif_dump_df_merger(df: pd.DataFrame,
     # Extend df with these columns:
     #   english string from mock statements
     #   mesh_id mapped by dict (if provided)
+    #   z-score values (if provided)
     # Extend df with famplex rows
     # 'stmt_hash' must exist as column in the input dataframe for merge to work
     # Preserve all rows in merged_df, so do left join:
@@ -340,7 +345,10 @@ def sif_dump_df_merger(df: pd.DataFrame,
                 merged_df['evidence_count'].apply(
                     func=lambda ec: 1/np.longfloat(ec))
     else:
-        logger.info('Skipping setting edge weight')
+        logger.info('Skipping setting belief weight')
+
+    if z_sc_df:
+        add_corrs(z_sc_df, merged_df)
 
     return merged_df
 
