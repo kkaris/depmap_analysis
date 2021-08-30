@@ -382,6 +382,7 @@ def sif_dump_df_to_digraph(df: Union[pd.DataFrame, str],
                            include_entity_hierarchies: bool = True,
                            sign_dict: Optional[Dict[str, int]] = None,
                            stmt_types: Optional[List[str]] = None,
+                           z_sc_path: Optional[str] = None,
                            verbosity: int = 0) \
         -> Union[DiGraph, MultiDiGraph, Tuple[MultiDiGraph, DiGraph]]:
     """Return a NetworkX digraph from a pandas dataframe of a db dump
@@ -417,6 +418,9 @@ def sif_dump_df_to_digraph(df: Union[pd.DataFrame, str],
         dictionary.
     stmt_types : List[str]
         A list of statement types to epxand out to other signs
+    z_sc_path:
+        If provided, must be a path to a square dataframe with HGNC symbols
+        as names on the axes and floats as entries
     verbosity: int
         Output various messages if > 0. For all messages, set to 4.
 
@@ -440,12 +444,23 @@ def sif_dump_df_to_digraph(df: Union[pd.DataFrame, str],
     else:
         sif_df = df
 
+    if z_sc_path:
+        if z_sc_path.endswith('h5'):
+            z_sc_df = pd.read_hdf(z_sc_path)
+        elif z_sc_path.endswith('pkl'):
+            z_sc_df: pd.DataFrame = file_opener(z_sc_path)
+        else:
+            raise ValueError(f'Unrecognized file: {z_sc_path}')
+    else:
+        z_sc_df = None
+
     # If signed types: filter out rows that of unsigned types
     if graph_type == 'digraph-signed-types':
         sif_df = sif_df[sif_df.stmt_type.isin(sign_dict.keys())]
 
     sif_df = sif_dump_df_merger(sif_df, graph_type, sign_dict, stmt_types,
-                                mesh_id_dict, verbosity=verbosity)
+                                mesh_id_dict, verbosity=verbosity,
+                                z_sc_df=z_sc_df)
 
     # Map ns:id to node name
     logger.info('Creating dictionary mapping (ns,id) to node name')
