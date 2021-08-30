@@ -353,12 +353,12 @@ def sif_dump_df_merger(df: pd.DataFrame,
     return merged_df
 
 
-def add_corrs(corr_df: pd.DataFrame, merged_df: pd.DataFrame):
+def add_corrs(z_sc_df: pd.DataFrame, merged_df: pd.DataFrame):
     logger.info('Getting available hgnc symbols from correlation matrix')
-    corr_symb_set = set(corr_df.columns.values)
+    corr_symb_set = set(z_sc_df.columns.values)
     logger.info('Stacking the correlation matrix: may take a couple of '
                 'minutes and tens of GiB of memory')
-    stacked_corr_df = corr_df.stack(
+    stacked_corr_df = z_sc_df.stack(
         dropna=True
     ).to_frame(
         name='z_score',
@@ -371,7 +371,7 @@ def add_corrs(corr_df: pd.DataFrame, merged_df: pd.DataFrame):
     # z_score: original z-score or 0 if nonexistant
     merged_df['z_score'][merged_df.z_score.isna()] = 0
     # corr_weight: max(abs(z-score)) + 1 - corr
-    self_corr = corr_df.iloc[0, 0]  # Should get self correlation
+    self_corr = z_sc_df.iloc[0, 0]  # Should get self correlation
     assert isinstance(self_corr, (int, float)) and self_corr > 0
     merged_df['corr_weight'] = self_corr - merged_df.z_score.abs()
 
