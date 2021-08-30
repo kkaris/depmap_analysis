@@ -372,6 +372,7 @@ def add_corrs(corr_df: pd.DataFrame, merged_df: pd.DataFrame):
     merged_df['z_score'][merged_df.z_score.isna()] = 0
     # corr_weight: max(abs(z-score)) + 1 - corr
     self_corr = corr_df.iloc[0, 0]  # Should get self correlation
+    assert isinstance(self_corr, (int, float)) and self_corr > 0
     merged_df['corr_weight'] = self_corr - merged_df.z_score.abs()
 
 
