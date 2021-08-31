@@ -362,7 +362,7 @@ def add_corrs(z_sc_df: pd.DataFrame, merged_df: pd.DataFrame):
         dropna=True
     ).to_frame(
         name='z_score',
-    ).reset_index(inplace=True).rename(
+    ).reset_index().rename(
         columns={'level_0': 'agA_name', 'level_1': 'agB_name'}
     )
     # Merge in stacked correlations to the sif df
