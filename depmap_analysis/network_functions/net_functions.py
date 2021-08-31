@@ -373,7 +373,45 @@ def add_corrs(z_sc_df: pd.DataFrame, merged_df: pd.DataFrame):
     # corr_weight: max(abs(z-score)) + 1 - corr
     self_corr = z_sc_df.iloc[0, 0]  # Should get self correlation
     assert isinstance(self_corr, (int, float)) and self_corr > 0
-    merged_df['corr_weight'] = self_corr - merged_df.z_score.abs()
+    merged_df['corr_weight'] = z_sc_weight_df(merged_df, self_corr)
+
+
+def z_sc_weight_df(df: pd.DataFrame, self_corr: float) -> pd.Series:
+    """Calculate the corresponding weight of a z-score from a dataframe
+
+    Parameters
+    ----------
+    df:
+        A dataframe that contains at least the column 'z_score'
+    self_corr:
+        The self correlation value
+
+    Returns
+    -------
+    :
+        The difference between self_corr and the absolute value of the
+        z-score as a series
+    """
+    return self_corr - df.z_score.abs()
+
+
+def z_sc_weight(z_score: float, self_corr: float) -> float:
+    """Calculate the corresponding weight of a given z-score
+
+    Parameters
+    ----------
+    z_score:
+        The z-score to calculate the weight of
+    self_corr:
+        The self correlation value
+
+    Returns
+    -------
+    :
+        The difference between self_corr and the absolute value of the
+        z-score
+    """
+    return self_corr - abs(z_score)
 
 
 def sif_dump_df_to_digraph(df: Union[pd.DataFrame, str],
