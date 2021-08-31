@@ -347,7 +347,7 @@ def sif_dump_df_merger(df: pd.DataFrame,
     else:
         logger.info('Skipping setting belief weight')
 
-    if z_sc_df:
+    if z_sc_df is not None:
         add_corrs(z_sc_df, merged_df)
 
     return merged_df
