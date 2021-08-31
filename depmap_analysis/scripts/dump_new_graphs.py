@@ -1,7 +1,11 @@
 """Dumps new indra graphs from the latest sif dump"""
+import pandas as pd
 import logging
 import argparse
+from typing import Optional
+
 import depmap_analysis.network_functions.net_functions as nf
+from depmap_analysis.util.io_functions import file_path
 from depmap_analysis.util.aws import get_latest_sif_s3, dump_pickle_to_s3, \
     NETS_PREFIX
 
@@ -21,9 +25,15 @@ INDRA_PBSEG = 'indranet_sign_edge_pybel.pkl'
 
 def dump_new_nets(mdg: bool = False, dg: bool = False, sg: bool = False,
                   spbg: bool = False, verbosity: int = 0,
-                  add_mesh_ids: bool = False):
+                  add_mesh_ids: bool = False,
+                  corr_path: Optional[str] = None):
     """Main script function for dumping new networks from latest db dumps"""
     options = dict()
+
+    if corr_path:
+        logger.info(f'Loading z-score dataframe from {corr_path}')
+        corr_df = pd.read_hdf(corr_path)
+        options['z_sc_path'] = corr_df
 
     if add_mesh_ids:
         (df, sif_date), (mid, _) = get_latest_sif_s3(get_mesh_ids=True)
@@ -65,5 +75,8 @@ if __name__ == '__main__':
     parser.add_argument('--pb', help='Dump new PyBel signed edge and node '
                                      'graphs',
                         action='store_true', default=False)
+    parser.add_argument('--z-score', type=file_path('h5'), help='Path to a '
+                                                                'correlation matrix')
     args = parser.parse_args()
-    dump_new_nets(mdg=args.mdg, dg=args.dg, sg=args.sg, spbg=args.pb)
+    dump_new_nets(mdg=args.mdg, dg=args.dg, sg=args.sg, spbg=args.pb,
+                  corr_path=args.z_score)
