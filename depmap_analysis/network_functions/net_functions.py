@@ -421,7 +421,7 @@ def sif_dump_df_to_digraph(df: Union[pd.DataFrame, str],
                            include_entity_hierarchies: bool = True,
                            sign_dict: Optional[Dict[str, int]] = None,
                            stmt_types: Optional[List[str]] = None,
-                           z_sc_path: Optional[str] = None,
+                           z_sc_path: Optional[Union[str, pd.DataFrame]] = None,
                            verbosity: int = 0) \
         -> Union[DiGraph, MultiDiGraph, Tuple[MultiDiGraph, DiGraph]]:
     """Return a NetworkX digraph from a pandas dataframe of a db dump
@@ -458,7 +458,7 @@ def sif_dump_df_to_digraph(df: Union[pd.DataFrame, str],
     stmt_types : List[str]
         A list of statement types to epxand out to other signs
     z_sc_path:
-        If provided, must be a path to a square dataframe with HGNC symbols
+        If provided, must be or be path to a square dataframe with HGNC symbols
         as names on the axes and floats as entries
     verbosity: int
         Output various messages if > 0. For all messages, set to 4.
@@ -483,13 +483,16 @@ def sif_dump_df_to_digraph(df: Union[pd.DataFrame, str],
     else:
         sif_df = df
 
-    if z_sc_path:
-        if z_sc_path.endswith('h5'):
-            z_sc_df = pd.read_hdf(z_sc_path)
-        elif z_sc_path.endswith('pkl'):
-            z_sc_df: pd.DataFrame = file_opener(z_sc_path)
-        else:
-            raise ValueError(f'Unrecognized file: {z_sc_path}')
+    if z_sc_path is not None:
+        if isinstance(z_sc_path, str):
+            if z_sc_path.endswith('h5'):
+                z_sc_df = pd.read_hdf(z_sc_path)
+            elif z_sc_path.endswith('pkl'):
+                z_sc_df: pd.DataFrame = file_opener(z_sc_path)
+            else:
+                raise ValueError(f'Unrecognized file: {z_sc_path}')
+        elif isinstance(z_sc_path, pd.DataFrame):
+            z_sc_df = z_sc_path
     else:
         z_sc_df = None
 
