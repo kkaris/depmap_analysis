@@ -369,7 +369,7 @@ def add_corrs(z_sc_df: pd.DataFrame, merged_df: pd.DataFrame):
     logger.info('Merging correlations into sif dataframe')
     merged_df = merged_df.merge(right=stacked_corr_df, how='left')
     # z_score: original z-score or 0 if nonexistant
-    merged_df['z_score'][merged_df.z_score.isna()] = 0
+    merged_df.loc[merged_df.z_score.isna(), 'z_score'] = 0
     # corr_weight: max(abs(z-score)) + 1 - corr
     self_corr = z_sc_df.iloc[0, 0]  # Should get self correlation
     assert isinstance(self_corr, (int, float)) and self_corr > 0
