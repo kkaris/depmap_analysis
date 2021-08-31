@@ -374,6 +374,7 @@ def add_corrs(z_sc_df: pd.DataFrame, merged_df: pd.DataFrame):
     self_corr = z_sc_df.iloc[0, 0]  # Should get self correlation
     assert isinstance(self_corr, (int, float)) and self_corr > 0
     merged_df['corr_weight'] = z_sc_weight_df(merged_df, self_corr)
+    logger.info('Finished setting z-score and z-score weight in sif df')
 
 
 def z_sc_weight_df(df: pd.DataFrame, self_corr: float) -> pd.Series:
