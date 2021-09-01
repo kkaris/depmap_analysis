@@ -353,6 +353,46 @@ def sif_dump_df_merger(df: pd.DataFrame,
     return merged_df
 
 
+def add_corr_to_edges(graph: DiGraph, z_corr: pd.DataFrame, self_corr_value:
+Optional[float] = None):
+    """Add z-score and associated weight to graph edges
+
+    Parameters
+    ----------
+    graph :
+        The DiGraph to add the edge attributes to
+    z_corr :
+        A square dataframe with all correlations
+    self_corr_value :
+        If provided, set this value as self corr value. Default: value of 
+        first non-NaN value on the diagonal.
+    """
+    self_corr = None
+    if self_corr_value is not None:
+        self_corr = self_corr_value
+    else:
+        for d in z_corr.values.diagonal():
+            if not pd.isna():
+                self_corr = d
+                break
+    if not isinstance(self_corr, (int, float, np.floating, np.integer)):
+        raise ValueError('Provide a value for self correlation or a z-score '
+                         'dataframe with self correlations')
+    non_z_score = 0
+    non_corr_weight = z_sc_weight(z_score=non_z_score, self_corr=self_corr)
+    for u, v, data in graph.edges(data=True):
+        un = u[0] if isinstance(u, tuple) else u
+        vn = v[0] if isinstance(v, tuple) else v
+        if un in z_corr and vn in z_corr:
+            z_sc = z_corr.loc[un, vn]
+            data['z_score'] = z_sc
+            data['z_score'] = z_sc_weight(z_sc, self_corr)
+        else:
+            data['z_score'] = non_z_score
+            data['corr_weight'] = non_corr_weight
+    logger.info('Done setting z-scores and z-score-weight in graph')
+
+
 def get_corrs(z_sc_df: pd.DataFrame, merged_df: pd.DataFrame) -> pd.DataFrame:
     logger.info('Getting available hgnc symbols from correlation matrix')
     corr_symb_set = set(z_sc_df.columns.values)
