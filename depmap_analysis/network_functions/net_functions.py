@@ -239,7 +239,6 @@ def sif_dump_df_merger(df: pd.DataFrame,
                        stmt_types: Optional[List[str]] = None,
                        mesh_id_dict: Optional[Dict[str, str]] = None,
                        set_weights: bool = True,
-                       z_sc_df: Optional[pd.DataFrame] = None,
                        verbosity: int = 0):
     """Merge the sif dump df with the provided dictionaries
 
@@ -346,9 +345,6 @@ def sif_dump_df_merger(df: pd.DataFrame,
                     func=lambda ec: 1/np.longfloat(ec))
     else:
         logger.info('Skipping setting belief weight')
-
-    if z_sc_df is not None:
-        add_corrs(z_sc_df, merged_df)
 
     return merged_df
 
