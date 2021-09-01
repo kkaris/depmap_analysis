@@ -446,6 +446,8 @@ def z_sc_weight_df(df: pd.DataFrame, self_corr: float) -> pd.Series:
 def z_sc_weight(z_score: float, self_corr: float) -> float:
     """Calculate the corresponding weight of a given z-score
 
+    If z_score == self_corr, return self_corr.
+
     Parameters
     ----------
     z_score:
@@ -457,8 +459,10 @@ def z_sc_weight(z_score: float, self_corr: float) -> float:
     -------
     :
         The difference between self_corr and the absolute value of the
-        z-score
+        z-score, unless z_score == self_corr, then return self_corr
     """
+    if self_corr == z_score:
+        return self_corr
     return self_corr - abs(z_score)
 
 
