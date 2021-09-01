@@ -353,7 +353,7 @@ def sif_dump_df_merger(df: pd.DataFrame,
     return merged_df
 
 
-def add_corrs(z_sc_df: pd.DataFrame, merged_df: pd.DataFrame):
+def get_corrs(z_sc_df: pd.DataFrame, merged_df: pd.DataFrame) -> pd.DataFrame:
     logger.info('Getting available hgnc symbols from correlation matrix')
     corr_symb_set = set(z_sc_df.columns.values)
     logger.info('Stacking the correlation matrix: may take a couple of '
