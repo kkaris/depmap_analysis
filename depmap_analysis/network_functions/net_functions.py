@@ -367,6 +367,7 @@ Optional[float] = None):
         If provided, set this value as self corr value. Default: value of 
         first non-NaN value on the diagonal.
     """
+    logger.info('Setting z-scores and z-score weights to graph edges')
     self_corr = None
     if self_corr_value is not None:
         self_corr = self_corr_value
@@ -390,7 +391,7 @@ Optional[float] = None):
         else:
             data['z_score'] = non_z_score
             data['corr_weight'] = non_corr_weight
-    logger.info('Done setting z-scores and z-score-weight in graph')
+    logger.info('Done setting z-scores and z-score weights')
 
 
 def get_corrs(z_sc_df: pd.DataFrame, merged_df: pd.DataFrame) -> pd.DataFrame:
