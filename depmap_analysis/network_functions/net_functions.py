@@ -502,8 +502,7 @@ def sif_dump_df_to_digraph(df: Union[pd.DataFrame, str],
         sif_df = sif_df[sif_df.stmt_type.isin(sign_dict.keys())]
 
     sif_df = sif_dump_df_merger(sif_df, graph_type, sign_dict, stmt_types,
-                                mesh_id_dict, verbosity=verbosity,
-                                z_sc_df=z_sc_df)
+                                mesh_id_dict, verbosity=verbosity)
 
     # Map ns:id to node name
     logger.info('Creating dictionary mapping (ns,id) to node name')
