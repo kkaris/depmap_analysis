@@ -9,7 +9,7 @@ import requests
 import numpy as np
 import pandas as pd
 from networkx import DiGraph, MultiDiGraph
-from typing import Tuple, Union, Dict, Optional, List
+from typing import Tuple, Union, Dict, Optional, List, Literal
 from requests.exceptions import ConnectionError
 
 from indra.config import CONFIG_DICT
@@ -41,6 +41,10 @@ SIGNS_TO_INT_SIGN = {INT_PLUS: INT_PLUS, '+': INT_PLUS, 'plus': INT_PLUS,
 REVERSE_SIGN = {INT_PLUS: INT_MINUS, INT_MINUS: INT_PLUS,
                 '+': '-', '-': '+',
                 'plus': 'minus', 'minus': 'plus'}
+
+# Derived types
+GraphTypes = Literal['digraph', 'multidigraph', 'signed', 'signed-expanded',
+                     'digraph-signed-types']
 
 # Use the "readers" vs db from indra_db
 READERS = {'reach', 'trips', 'isi', 'sparser', 'medscan', 'rlimsp', 'eidos',
@@ -414,7 +418,7 @@ def z_sc_weight(z_score: float, self_corr: float) -> float:
 def sif_dump_df_to_digraph(df: Union[pd.DataFrame, str],
                            date: str,
                            mesh_id_dict: Optional[Dict] = None,
-                           graph_type: str = 'digraph',
+                           graph_type: GraphTypes = 'digraph',
                            include_entity_hierarchies: bool = True,
                            sign_dict: Optional[Dict[str, int]] = None,
                            stmt_types: Optional[List[str]] = None,
