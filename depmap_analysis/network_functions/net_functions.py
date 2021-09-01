@@ -540,6 +540,9 @@ def sif_dump_df_to_digraph(df: Union[pd.DataFrame, str],
                 raise ValueError(f'Unrecognized file: {z_sc_path}')
         elif isinstance(z_sc_path, pd.DataFrame):
             z_sc_df = z_sc_path
+        else:
+            raise ValueError('Only file paths and data frames allowed as '
+                             'arguments to z_sc_path')
     else:
         z_sc_df = None
 
@@ -607,8 +610,19 @@ def sif_dump_df_to_digraph(df: Union[pd.DataFrame, str],
                 else:
                     sng_hash_edge_dict[es['stmt_hash']].add(edge)
         signed_node_graph.graph['edge_by_hash'] = sng_hash_edge_dict
+        if z_sc_df is not None:
+            # Set z-score attributes
+            add_corr_to_edges(graph=signed_edge_graph, z_corr=z_sc_df)
+            add_corr_to_edges(graph=signed_node_graph, z_corr=z_sc_df)
 
         return signed_edge_graph, signed_node_graph
+    else:
+        raise ValueError(f'Unrecognized graph type {graph_type}. Must be one '
+                         f'of: {", ".join(graph_options)}')
+
+    if z_sc_df is not None:
+        # Set z-score attributes
+        add_corr_to_edges(graph=indranet_graph, z_corr=z_sc_df)
 
     # Add hierarchy relations to graph (not applicable for signed graphs)
     if include_entity_hierarchies and graph_type in ('multidigraph',
@@ -622,6 +636,15 @@ def sif_dump_df_to_digraph(df: Union[pd.DataFrame, str],
         added_pairs = set()  # Save (A, B, URI)
         logger.info('Building entity relations to be added to data frame')
         entities = 0
+        non_corr_weight = None
+        if z_sc_df is not None:
+            # Get non-corr weight
+            for edge in indranet_graph.edges:
+                if indranet_graph.edges[edge]['z_score'] == 0:
+                    non_corr_weight = indranet_graph.edges[edge]['corr_weight']
+                    break
+            assert non_corr_weight is not None
+
         for ns, _id, uri in full_entity_list:
             node = _id
             # Get name in case it's different than id
@@ -649,6 +672,9 @@ def sif_dump_df_to_digraph(df: Union[pd.DataFrame, str],
                           'source_counts': {'fplx': 1}, 'stmt_hash': puri,
                           'belief': 1.0, 'weight': NP_PRECISION,
                           'curated': True}
+                    if z_sc_df is not None:
+                        ed['z_score'] = 0
+                        ed['corr_weight'] = non_corr_weight
                     # Add non-existing nodes
                     if ed['agA_name'] not in indranet_graph.nodes:
                         indranet_graph.add_node(ed['agA_name'],
