@@ -534,8 +534,10 @@ def sif_dump_df_to_digraph(df: Union[pd.DataFrame, str],
     if z_sc_path is not None:
         if isinstance(z_sc_path, str):
             if z_sc_path.endswith('h5'):
+                logger.info(f'Loading z-scores from {z_sc_path}')
                 z_sc_df = pd.read_hdf(z_sc_path)
             elif z_sc_path.endswith('pkl'):
+                logger.info(f'Loading z-scores from {z_sc_path}')
                 z_sc_df: pd.DataFrame = file_opener(z_sc_path)
             else:
                 raise ValueError(f'Unrecognized file: {z_sc_path}')
