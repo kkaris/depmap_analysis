@@ -373,7 +373,7 @@ def add_corr_to_edges(graph: DiGraph, z_corr: pd.DataFrame,
         self_corr = self_corr_value
     else:
         for d in z_corr.values.diagonal():
-            if not pd.isna():
+            if not np.isnan(d):
                 self_corr = d
                 break
     if not isinstance(self_corr, (int, float, np.floating, np.integer)):
