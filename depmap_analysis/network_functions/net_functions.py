@@ -353,8 +353,8 @@ def sif_dump_df_merger(df: pd.DataFrame,
     return merged_df
 
 
-def add_corr_to_edges(graph: DiGraph, z_corr: pd.DataFrame, self_corr_value:
-Optional[float] = None):
+def add_corr_to_edges(graph: DiGraph, z_corr: pd.DataFrame,
+                      self_corr_value: Optional[float] = None):
     """Add z-score and associated weight to graph edges
 
     Parameters
@@ -387,10 +387,12 @@ Optional[float] = None):
         if un in z_corr and vn in z_corr:
             z_sc = z_corr.loc[un, vn]
             data['z_score'] = z_sc
-            data['z_score'] = z_sc_weight(z_sc, self_corr)
+            data['corr_weight'] = z_sc_weight(z_sc, self_corr)
         else:
             data['z_score'] = non_z_score
             data['corr_weight'] = non_corr_weight
+    assert all('corr_weight' in graph.edges[e] and 'z_score' in graph.edges[e]
+               for e in graph.edges)
     logger.info('Done setting z-scores and z-score weights')
 
 
