@@ -366,15 +366,18 @@ def add_corrs(z_sc_df: pd.DataFrame, merged_df: pd.DataFrame):
         columns={'level_0': 'agA_name', 'level_1': 'agB_name'}
     )
     # Merge in stacked correlations to the sif df
-    logger.info('Merging correlations into sif dataframe')
-    merged_df = merged_df.merge(right=stacked_corr_df, how='left')
+    logger.info('Getting relevant correlations')
+    z_corr_pairs = merged_df[['agA_name', 'agB_name']].merge(
+        right=stacked_corr_df, how='left'
+    ).drop_duplicates()
     # z_score: original z-score or 0 if nonexistant
-    merged_df.loc[merged_df.z_score.isna(), 'z_score'] = 0
+    z_corr_pairs.loc[z_corr_pairs.z_score.isna(), 'z_score'] = 0
     # corr_weight: max(abs(z-score)) + 1 - corr
     self_corr = z_sc_df.iloc[0, 0]  # Should get self correlation
     assert isinstance(self_corr, (int, float)) and self_corr > 0
-    merged_df['corr_weight'] = z_sc_weight_df(merged_df, self_corr)
+    z_corr_pairs['corr_weight'] = z_sc_weight_df(z_corr_pairs, self_corr)
     logger.info('Finished setting z-score and z-score weight in sif df')
+    return z_corr_pairs
 
 
 def z_sc_weight_df(df: pd.DataFrame, self_corr: float) -> pd.Series:
