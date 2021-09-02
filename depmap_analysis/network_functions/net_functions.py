@@ -651,6 +651,9 @@ def sif_dump_df_to_digraph(df: Union[pd.DataFrame, str],
                     non_corr_weight = indranet_graph.edges[edge]['corr_weight']
                     break
             assert non_corr_weight is not None
+            z_sc_attrs = {'z_score': 0, 'corr_weight': non_corr_weight}
+        else:
+            z_sc_attrs = {}
 
         for ns, _id, uri in full_entity_list:
             node = _id
@@ -679,9 +682,6 @@ def sif_dump_df_to_digraph(df: Union[pd.DataFrame, str],
                           'source_counts': {'fplx': 1}, 'stmt_hash': puri,
                           'belief': 1.0, 'weight': NP_PRECISION,
                           'curated': True}
-                    if z_sc_df is not None:
-                        ed['z_score'] = 0
-                        ed['corr_weight'] = non_corr_weight
                     # Add non-existing nodes
                     if ed['agA_name'] not in indranet_graph.nodes:
                         indranet_graph.add_node(ed['agA_name'],
@@ -715,7 +715,8 @@ def sif_dump_df_to_digraph(df: Union[pd.DataFrame, str],
                                                     v,
                                                     belief=1.0,
                                                     weight=1.0,
-                                                    statements=[ed])
+                                                    statements=[ed],
+                                                    **z_sc_attrs)
 
         logger.info('Loaded %d entity relations into dataframe' % entities)
         indranet_graph.graph['node_by_uri'] = node_by_uri
