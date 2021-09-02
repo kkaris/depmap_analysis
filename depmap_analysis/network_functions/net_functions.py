@@ -380,14 +380,16 @@ def add_corr_to_edges(graph: DiGraph, z_corr: pd.DataFrame,
         raise ValueError('Provide a value for self correlation or a z-score '
                          'dataframe with self correlations')
     non_z_score = 0
-    non_corr_weight = z_sc_weight(z_score=non_z_score, self_corr=self_corr)
+    non_corr_weight = round(
+        z_sc_weight(z_score=non_z_score, self_corr=self_corr), 4
+    )
     for u, v, data in graph.edges(data=True):
         un = u[0] if isinstance(u, tuple) else u
         vn = v[0] if isinstance(v, tuple) else v
         if un in z_corr and vn in z_corr:
             z_sc = z_corr.loc[un, vn]
-            data['z_score'] = z_sc
-            data['corr_weight'] = z_sc_weight(z_sc, self_corr)
+            data['z_score'] = round(z_sc, 4)
+            data['corr_weight'] = round(z_sc_weight(z_sc, self_corr), 4)
         else:
             data['z_score'] = non_z_score
             data['corr_weight'] = non_corr_weight
