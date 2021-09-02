@@ -393,6 +393,8 @@ def add_corr_to_edges(graph: DiGraph, z_corr: pd.DataFrame,
         else:
             data['z_score'] = non_z_score
             data['corr_weight'] = non_corr_weight
+
+    logger.info('Performing sanity checks')
     assert all('corr_weight' in graph.edges[e] and 'z_score' in graph.edges[e]
                for e in graph.edges), 'Some edges are missing z_score or ' \
                                       'corr_weight attributes'
