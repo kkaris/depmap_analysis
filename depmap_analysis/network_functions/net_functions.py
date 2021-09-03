@@ -468,8 +468,8 @@ def z_sc_weight(z_score: float, self_corr: float) -> float:
         z-score, unless z_score == self_corr, then return self_corr
     """
     if self_corr == z_score:
-        return self_corr
-    return self_corr - abs(z_score)
+        return 1
+    return (self_corr - abs(z_score)) / self_corr
 
 
 def sif_dump_df_to_digraph(df: Union[pd.DataFrame, str],
