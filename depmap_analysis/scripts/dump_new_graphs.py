@@ -64,7 +64,7 @@ def dump_new_nets(
     )
     prefix = f"{NETS_PREFIX}/{sif_date}/".replace("//", "/")
     if mdg:
-        network = nf.sif_dump_df_to_digraph(graph_type="multi", **options)
+        network = nf.sif_dump_df_to_digraph(graph_type="multidigraph", **options)
         dump_pickle_to_s3(INDRA_MDG, network, prefix=prefix)
     if dg:
         network = nf.sif_dump_df_to_digraph(**options)
