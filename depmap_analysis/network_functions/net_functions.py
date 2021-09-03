@@ -11,6 +11,7 @@ import pandas as pd
 from networkx import DiGraph, MultiDiGraph
 from typing import Tuple, Union, Dict, Optional, List, Literal
 from requests.exceptions import ConnectionError
+from tqdm import tqdm
 
 from indra.config import CONFIG_DICT
 from indra.ontology.bio import bio_ontology
@@ -383,7 +384,7 @@ def add_corr_to_edges(graph: DiGraph, z_corr: pd.DataFrame,
     non_corr_weight = round(
         z_sc_weight(z_score=non_z_score, self_corr=self_corr), 4
     )
-    for u, v, data in graph.edges(data=True):
+    for u, v, data in tqdm(graph.edges(data=True)):
         un = u[0] if isinstance(u, tuple) else u
         vn = v[0] if isinstance(v, tuple) else v
         if un in z_corr and vn in z_corr and not np.isnan(z_corr.loc[un, vn]):
@@ -396,9 +397,9 @@ def add_corr_to_edges(graph: DiGraph, z_corr: pd.DataFrame,
 
     logger.info('Performing sanity checks')
     assert all('corr_weight' in graph.edges[e] and 'z_score' in graph.edges[e]
-               for e in graph.edges), 'Some edges are missing z_score or ' \
-                                      'corr_weight attributes'
-    assert all(graph.edges[e]['corr_weight'] > 0 for e in graph.edges), \
+               for e in tqdm(graph.edges)), \
+        'Some edges are missing z_score or corr_weight attributes'
+    assert all(graph.edges[e]['corr_weight'] > 0 for e in tqdm(graph.edges)), \
         'Some values of corr_weight are <= 0'
     logger.info('Done setting z-scores and z-score weights')
 
