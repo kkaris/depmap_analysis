@@ -2,7 +2,7 @@ import re
 import json
 import pickle
 import logging
-from typing import Union, Tuple, Any
+from typing import Union, Tuple, Any, Dict, Optional
 from operator import itemgetter
 
 from indra.util.aws import get_s3_file_tree, get_s3_client
@@ -82,8 +82,27 @@ def load_pickle_from_s3(s3, key, bucket):
     return pyobj
 
 
-def dump_json_to_s3(name, json_obj, public=False, get_url=False):
-    """Set public=True for public read access"""
+def dump_json_to_s3(name: str, json_obj: Dict, public: bool = False,
+                    get_url: bool = False) -> Optional[str]:
+    """Dumps a json object to S3
+
+    Parameters
+    ----------
+    name :
+        The file name to use for the uploaded file. Appropriate prefixes
+        will be used.
+    json_obj :
+        The json object to upload
+    public :
+        If True allow public read access. Default: False.
+    get_url :
+        If True return the S3 url of the object
+
+    Returns
+    -------
+    :
+        Optionally return the S3 url of the json file
+    """
     s3 = get_s3_client(unsigned=False)
     key = 'indra_network_search/' + name
     options = {'Bucket': DUMPS_BUCKET,
