@@ -690,7 +690,8 @@ def sif_dump_df_to_digraph(df: Union[pd.DataFrame, str],
                           'belief': 1.0, 'weight': NP_PRECISION,
                           'curated': True,
                           'english': f'{pns}:{pid} is an ontological parent '
-                                     f'of {ns}:{_id}'}
+                                     f'of {ns}:{_id}',
+                          'z_score': 0, 'corr_weight': 1}
                     # Add non-existing nodes
                     if ed['agA_name'] not in indranet_graph.nodes:
                         indranet_graph.add_node(ed['agA_name'],
