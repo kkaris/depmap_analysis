@@ -466,7 +466,7 @@ def z_sc_weight(z_score: float, self_corr: float) -> float:
     -------
     :
         The difference between self_corr and the absolute value of the
-        z-score, unless z_score == self_corr, then return self_corr
+        z-score normalized, unless z_score == self_corr, then return 1
     """
     if self_corr == z_score:
         return 1
