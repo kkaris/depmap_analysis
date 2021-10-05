@@ -1,33 +1,33 @@
 import logging
-from decimal import Decimal
-from datetime import datetime
-from itertools import cycle
-from collections import defaultdict
 import subprocess
+from collections import defaultdict
+from datetime import datetime
+from decimal import Decimal
+from itertools import cycle
+from typing import Tuple, Union, Dict, Optional, List, Literal
 
-import requests
 import numpy as np
 import pandas as pd
+import requests
 from networkx import DiGraph, MultiDiGraph
-from typing import Tuple, Union, Dict, Optional, List, Literal
 from requests.exceptions import ConnectionError
 from tqdm import tqdm
 
-from indra.config import CONFIG_DICT
-from indra.ontology.bio import bio_ontology
-from indra.belief import load_default_probs
-from indra.assemblers.english import EnglishAssembler
-from indra.statements import Agent, get_statement_by_name, get_all_descendants
-from indra.assemblers.indranet import IndraNet
-from indra.assemblers.indranet.net import default_sign_dict
-from indra.databases import get_identifiers_url
-from indra.assemblers.pybel import PybelAssembler
-from indra.assemblers.pybel.assembler import belgraph_to_signed_graph
-from indra.explanation.pathfinding import bfs_search
-from indra.explanation.model_checker.model_checker import \
-    signed_edges_to_signed_nodes
 from depmap_analysis.util.aws import get_latest_pa_stmt_dump
 from depmap_analysis.util.io_functions import file_opener
+from indra.assemblers.english import EnglishAssembler
+from indra.assemblers.indranet import IndraNet
+from indra.assemblers.indranet.net import default_sign_dict
+from indra.assemblers.pybel import PybelAssembler
+from indra.assemblers.pybel.assembler import belgraph_to_signed_graph
+from indra.belief import load_default_probs
+from indra.config import CONFIG_DICT
+from indra.databases import get_identifiers_url
+from indra.explanation.model_checker.model_checker import \
+    signed_edges_to_signed_nodes
+from indra.explanation.pathfinding import bfs_search
+from indra.ontology.bio import bio_ontology
+from indra.statements import Agent, get_statement_by_name, get_all_descendants
 
 logger = logging.getLogger(__name__)
 
@@ -270,9 +270,6 @@ def sif_dump_df_merger(df: pd.DataFrame,
         common PMID
     set_weights : bool
         If True, set the edge weights. Default: True.
-    z_sc_df:
-        If provided, must be a square dataframe with HGNC symbols as names on
-        the axes and floats as entries
     verbosity : int
         Output various extra messages if > 1.
 
@@ -409,23 +406,28 @@ def get_corrs(z_sc_df: pd.DataFrame, merged_df: pd.DataFrame) -> pd.DataFrame:
     corr_symb_set = set(z_sc_df.columns.values)
     logger.info('Stacking the correlation matrix: may take a couple of '
                 'minutes and tens of GiB of memory')
-    stacked_corr_df = z_sc_df.stack(
+    stacked_z_sc_df = z_sc_df.stack(
         dropna=True
     ).to_frame(
         name='z_score',
     ).reset_index().rename(
         columns={'level_0': 'agA_name', 'level_1': 'agB_name'}
     )
+
     # Merge in stacked correlations to the sif df
     logger.info('Getting relevant correlations')
     z_corr_pairs = merged_df[['agA_name', 'agB_name']].merge(
-        right=stacked_corr_df, how='left'
+        right=stacked_z_sc_df, how='left'
     ).drop_duplicates()
+
     # z_score: original z-score or 0 if nonexistant
     z_corr_pairs.loc[z_corr_pairs.z_score.isna(), 'z_score'] = 0
-    # corr_weight: max(abs(z-score)) + 1 - corr
-    self_corr = z_sc_df.iloc[0, 0]  # Should get self correlation
+
+    # Get self correlation
+    self_corr = z_sc_df.iloc[0, 0]
     assert isinstance(self_corr, (int, float)) and self_corr > 0
+
+    # Calculate corr weight = (self_corr_z_sc - abs(z_score)) / self_corr
     z_corr_pairs['corr_weight'] = z_sc_weight_df(z_corr_pairs, self_corr)
     logger.info('Finished setting z-score and z-score weight in sif df')
     return z_corr_pairs
@@ -436,9 +438,9 @@ def z_sc_weight_df(df: pd.DataFrame, self_corr: float) -> pd.Series:
 
     Parameters
     ----------
-    df:
+    df :
         A dataframe that contains at least the column 'z_score'
-    self_corr:
+    self_corr :
         The self correlation value
 
     Returns
@@ -447,7 +449,13 @@ def z_sc_weight_df(df: pd.DataFrame, self_corr: float) -> pd.Series:
         The difference between self_corr and the absolute value of the
         z-score as a series
     """
-    return self_corr - df.z_score.abs()
+    # Set z-score weight w = self corr z-score - abs(z-score) / self corr z-score
+    out_series: pd.Series = (self_corr - df.z_score.abs()) / self_corr
+
+    # Set self corr values and NaN's to a weight of 1
+    out_series[(out_series == 0) | out_series.isna()] = 1
+
+    return out_series
 
 
 def z_sc_weight(z_score: float, self_corr: float) -> float:
