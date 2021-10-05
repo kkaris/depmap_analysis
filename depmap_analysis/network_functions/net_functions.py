@@ -54,7 +54,7 @@ REVERSE_SIGN = {INT_PLUS: INT_MINUS, INT_MINUS: INT_PLUS,
 GraphTypes = Literal['digraph', 'multidigraph', 'signed', 'signed-expanded',
                      'digraph-signed-types']
 
-# Use the "readers" vs db from indra_db
+# FixMe use the "readers" vs db from indra_db, where is it?
 READERS = {'reach', 'trips', 'isi', 'sparser', 'medscan', 'rlimsp', 'eidos',
            'cwms', 'geneways', 'tees', 'hume', 'sofia'}
 
