@@ -4,7 +4,14 @@ from collections import defaultdict
 from datetime import datetime
 from decimal import Decimal
 from itertools import cycle
-from typing import Tuple, Union, Dict, Optional, List, Literal
+from typing import Tuple, Union, Dict, Optional, List
+
+try:
+    # Py 3.8+
+    from typing import Literal
+except ImportError:
+    # Py 3.7-
+    from typing_extensions import Literal
 
 import numpy as np
 import pandas as pd
@@ -47,7 +54,7 @@ REVERSE_SIGN = {INT_PLUS: INT_MINUS, INT_MINUS: INT_PLUS,
 GraphTypes = Literal['digraph', 'multidigraph', 'signed', 'signed-expanded',
                      'digraph-signed-types']
 
-# Use the "readers" vs db from indra_db
+# FixMe use the "readers" vs db from indra_db, where is it?
 READERS = {'reach', 'trips', 'isi', 'sparser', 'medscan', 'rlimsp', 'eidos',
            'cwms', 'geneways', 'tees', 'hume', 'sofia'}
 
