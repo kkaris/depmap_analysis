@@ -1,32 +1,33 @@
 import logging
-from decimal import Decimal
-from datetime import datetime
-from itertools import cycle
-from collections import defaultdict
 import subprocess
+from collections import defaultdict
+from datetime import datetime
+from decimal import Decimal
+from itertools import cycle
+from typing import Tuple, Union, Dict, Optional, List, Literal
 
-import requests
 import numpy as np
 import pandas as pd
+import requests
 from networkx import DiGraph, MultiDiGraph
-from typing import Tuple, Union, Dict, Optional, List
 from requests.exceptions import ConnectionError
+from tqdm import tqdm
 
-from indra.config import CONFIG_DICT
-from indra.ontology.bio import bio_ontology
-from indra.belief import load_default_probs
-from indra.assemblers.english import EnglishAssembler
-from indra.statements import Agent, get_statement_by_name, get_all_descendants
-from indra.assemblers.indranet import IndraNet
-from indra.assemblers.indranet.net import default_sign_dict
-from indra.databases import get_identifiers_url
-from indra.assemblers.pybel import PybelAssembler
-from indra.assemblers.pybel.assembler import belgraph_to_signed_graph
-from indra.explanation.pathfinding import bfs_search
-from indra.explanation.model_checker.model_checker import \
-    signed_edges_to_signed_nodes
 from depmap_analysis.util.aws import get_latest_pa_stmt_dump
 from depmap_analysis.util.io_functions import file_opener
+from indra.assemblers.english import EnglishAssembler
+from indra.assemblers.indranet import IndraNet
+from indra.assemblers.indranet.net import default_sign_dict
+from indra.assemblers.pybel import PybelAssembler
+from indra.assemblers.pybel.assembler import belgraph_to_signed_graph
+from indra.belief import load_default_probs
+from indra.config import CONFIG_DICT
+from indra.databases import get_identifiers_url
+from indra.explanation.model_checker.model_checker import \
+    signed_edges_to_signed_nodes
+from indra.explanation.pathfinding import bfs_search
+from indra.ontology.bio import bio_ontology
+from indra.statements import Agent, get_statement_by_name, get_all_descendants
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,10 @@ SIGNS_TO_INT_SIGN = {INT_PLUS: INT_PLUS, '+': INT_PLUS, 'plus': INT_PLUS,
 REVERSE_SIGN = {INT_PLUS: INT_MINUS, INT_MINUS: INT_PLUS,
                 '+': '-', '-': '+',
                 'plus': 'minus', 'minus': 'plus'}
+
+# Derived types
+GraphTypes = Literal['digraph', 'multidigraph', 'signed', 'signed-expanded',
+                     'digraph-signed-types']
 
 # Use the "readers" vs db from indra_db
 READERS = {'reach', 'trips', 'isi', 'sparser', 'medscan', 'rlimsp', 'eidos',
@@ -238,8 +243,8 @@ def sif_dump_df_merger(df: pd.DataFrame,
                        sign_dict: Optional[Dict[str, int]] = None,
                        stmt_types: Optional[List[str]] = None,
                        mesh_id_dict: Optional[Dict[str, str]] = None,
-                       set_weights: Optional[bool] = True,
-                       verbosity: Optional[int] = 0):
+                       set_weights: bool = True,
+                       verbosity: int = 0):
     """Merge the sif dump df with the provided dictionaries
 
     Parameters
@@ -284,6 +289,7 @@ def sif_dump_df_merger(df: pd.DataFrame,
     # Extend df with these columns:
     #   english string from mock statements
     #   mesh_id mapped by dict (if provided)
+    #   z-score values (if provided)
     # Extend df with famplex rows
     # 'stmt_hash' must exist as column in the input dataframe for merge to work
     # Preserve all rows in merged_df, so do left join:
@@ -340,18 +346,149 @@ def sif_dump_df_merger(df: pd.DataFrame,
                 merged_df['evidence_count'].apply(
                     func=lambda ec: 1/np.longfloat(ec))
     else:
-        logger.info('Skipping setting edge weight')
+        logger.info('Skipping setting belief weight')
 
     return merged_df
+
+
+def add_corr_to_edges(graph: DiGraph, z_corr: pd.DataFrame,
+                      self_corr_value: Optional[float] = None):
+    """Add z-score and associated weight to graph edges
+
+    Parameters
+    ----------
+    graph :
+        The DiGraph to add the edge attributes to
+    z_corr :
+        A square dataframe with all correlations
+    self_corr_value :
+        If provided, set this value as self corr value. Default: value of 
+        first non-NaN value on the diagonal.
+    """
+    logger.info('Setting z-scores and z-score weights to graph edges')
+    self_corr = None
+    if self_corr_value is not None:
+        self_corr = self_corr_value
+    else:
+        for d in z_corr.values.diagonal():
+            if not np.isnan(d):
+                self_corr = d
+                break
+    if not isinstance(self_corr, (int, float, np.floating, np.integer)):
+        raise ValueError('Provide a value for self correlation or a z-score '
+                         'dataframe with self correlations')
+    non_z_score = 0
+    non_corr_weight = round(
+        z_sc_weight(z_score=non_z_score, self_corr=self_corr), 4
+    )
+    for u, v, data in tqdm(graph.edges(data=True)):
+        un = u[0] if isinstance(u, tuple) else u
+        vn = v[0] if isinstance(v, tuple) else v
+        if un in z_corr and vn in z_corr and not np.isnan(z_corr.loc[un, vn]):
+            z_sc = z_corr.loc[un, vn]
+            data['z_score'] = round(z_sc, 4)
+            data['corr_weight'] = round(z_sc_weight(z_sc, self_corr), 4)
+        else:
+            data['z_score'] = non_z_score
+            data['corr_weight'] = non_corr_weight
+
+    logger.info('Performing sanity checks')
+    assert all('corr_weight' in graph.edges[e] and 'z_score' in graph.edges[e]
+               for e in tqdm(graph.edges)), \
+        'Some edges are missing z_score or corr_weight attributes'
+    assert all(graph.edges[e]['corr_weight'] > 0 for e in tqdm(graph.edges)), \
+        'Some values of corr_weight are <= 0'
+    logger.info('Done setting z-scores and z-score weights')
+
+
+def get_corrs(z_sc_df: pd.DataFrame, merged_df: pd.DataFrame) -> pd.DataFrame:
+    logger.info('Getting available hgnc symbols from correlation matrix')
+    corr_symb_set = set(z_sc_df.columns.values)
+    logger.info('Stacking the correlation matrix: may take a couple of '
+                'minutes and tens of GiB of memory')
+    stacked_z_sc_df = z_sc_df.stack(
+        dropna=True
+    ).to_frame(
+        name='z_score',
+    ).reset_index().rename(
+        columns={'level_0': 'agA_name', 'level_1': 'agB_name'}
+    )
+
+    # Merge in stacked correlations to the sif df
+    logger.info('Getting relevant correlations')
+    z_corr_pairs = merged_df[['agA_name', 'agB_name']].merge(
+        right=stacked_z_sc_df, how='left'
+    ).drop_duplicates()
+
+    # z_score: original z-score or 0 if nonexistant
+    z_corr_pairs.loc[z_corr_pairs.z_score.isna(), 'z_score'] = 0
+
+    # Get self correlation
+    self_corr = z_sc_df.iloc[0, 0]
+    assert isinstance(self_corr, (int, float)) and self_corr > 0
+
+    # Calculate corr weight = (self_corr_z_sc - abs(z_score)) / self_corr
+    z_corr_pairs['corr_weight'] = z_sc_weight_df(z_corr_pairs, self_corr)
+    logger.info('Finished setting z-score and z-score weight in sif df')
+    return z_corr_pairs
+
+
+def z_sc_weight_df(df: pd.DataFrame, self_corr: float) -> pd.Series:
+    """Calculate the corresponding weight of a z-score from a dataframe
+
+    Parameters
+    ----------
+    df :
+        A dataframe that contains at least the column 'z_score'
+    self_corr :
+        The self correlation value
+
+    Returns
+    -------
+    :
+        The difference between self_corr and the absolute value of the
+        z-score as a series
+    """
+    # Set z-score weight w = self corr z-score - abs(z-score) / self corr z-score
+    out_series: pd.Series = (self_corr - df.z_score.abs()) / self_corr
+
+    # Set self corr values and NaN's to a weight of 1
+    out_series[(out_series == 0) | out_series.isna()] = 1
+
+    return out_series
+
+
+def z_sc_weight(z_score: float, self_corr: float) -> float:
+    """Calculate the corresponding weight of a given z-score
+
+    If z_score == self_corr, return self_corr.
+
+    Parameters
+    ----------
+    z_score:
+        The z-score to calculate the weight of
+    self_corr:
+        The self correlation value
+
+    Returns
+    -------
+    :
+        The difference between self_corr and the absolute value of the
+        z-score normalized, unless z_score == self_corr, then return 1
+    """
+    if self_corr == z_score:
+        return 1
+    return (self_corr - abs(z_score)) / self_corr
 
 
 def sif_dump_df_to_digraph(df: Union[pd.DataFrame, str],
                            date: str,
                            mesh_id_dict: Optional[Dict] = None,
-                           graph_type: str = 'digraph',
+                           graph_type: GraphTypes = 'digraph',
                            include_entity_hierarchies: bool = True,
                            sign_dict: Optional[Dict[str, int]] = None,
                            stmt_types: Optional[List[str]] = None,
+                           z_sc_path: Optional[Union[str, pd.DataFrame]] = None,
                            verbosity: int = 0) \
         -> Union[DiGraph, MultiDiGraph, Tuple[MultiDiGraph, DiGraph]]:
     """Return a NetworkX digraph from a pandas dataframe of a db dump
@@ -387,6 +524,9 @@ def sif_dump_df_to_digraph(df: Union[pd.DataFrame, str],
         dictionary.
     stmt_types : List[str]
         A list of statement types to epxand out to other signs
+    z_sc_path:
+        If provided, must be or be path to a square dataframe with HGNC symbols
+        as names on the axes and floats as entries
     verbosity: int
         Output various messages if > 0. For all messages, set to 4.
 
@@ -409,6 +549,24 @@ def sif_dump_df_to_digraph(df: Union[pd.DataFrame, str],
         sif_df = file_opener(df)
     else:
         sif_df = df
+
+    if z_sc_path is not None:
+        if isinstance(z_sc_path, str):
+            if z_sc_path.endswith('h5'):
+                logger.info(f'Loading z-scores from {z_sc_path}')
+                z_sc_df = pd.read_hdf(z_sc_path)
+            elif z_sc_path.endswith('pkl'):
+                logger.info(f'Loading z-scores from {z_sc_path}')
+                z_sc_df: pd.DataFrame = file_opener(z_sc_path)
+            else:
+                raise ValueError(f'Unrecognized file: {z_sc_path}')
+        elif isinstance(z_sc_path, pd.DataFrame):
+            z_sc_df = z_sc_path
+        else:
+            raise ValueError('Only file paths and data frames allowed as '
+                             'arguments to z_sc_path')
+    else:
+        z_sc_df = None
 
     # If signed types: filter out rows that of unsigned types
     if graph_type == 'digraph-signed-types':
@@ -474,8 +632,19 @@ def sif_dump_df_to_digraph(df: Union[pd.DataFrame, str],
                 else:
                     sng_hash_edge_dict[es['stmt_hash']].add(edge)
         signed_node_graph.graph['edge_by_hash'] = sng_hash_edge_dict
+        if z_sc_df is not None:
+            # Set z-score attributes
+            add_corr_to_edges(graph=signed_edge_graph, z_corr=z_sc_df)
+            add_corr_to_edges(graph=signed_node_graph, z_corr=z_sc_df)
 
         return signed_edge_graph, signed_node_graph
+    else:
+        raise ValueError(f'Unrecognized graph type {graph_type}. Must be one '
+                         f'of: {", ".join(graph_options)}')
+
+    if z_sc_df is not None:
+        # Set z-score attributes
+        add_corr_to_edges(graph=indranet_graph, z_corr=z_sc_df)
 
     # Add hierarchy relations to graph (not applicable for signed graphs)
     if include_entity_hierarchies and graph_type in ('multidigraph',
@@ -489,6 +658,18 @@ def sif_dump_df_to_digraph(df: Union[pd.DataFrame, str],
         added_pairs = set()  # Save (A, B, URI)
         logger.info('Building entity relations to be added to data frame')
         entities = 0
+        non_corr_weight = None
+        if z_sc_df is not None:
+            # Get non-corr weight
+            for edge in indranet_graph.edges:
+                if indranet_graph.edges[edge]['z_score'] == 0:
+                    non_corr_weight = indranet_graph.edges[edge]['corr_weight']
+                    break
+            assert non_corr_weight is not None
+            z_sc_attrs = {'z_score': 0, 'corr_weight': non_corr_weight}
+        else:
+            z_sc_attrs = {}
+
         for ns, _id, uri in full_entity_list:
             node = _id
             # Get name in case it's different than id
@@ -515,7 +696,10 @@ def sif_dump_df_to_digraph(df: Union[pd.DataFrame, str],
                           'stmt_type': 'fplx', 'evidence_count': 1,
                           'source_counts': {'fplx': 1}, 'stmt_hash': puri,
                           'belief': 1.0, 'weight': NP_PRECISION,
-                          'curated': True}
+                          'curated': True,
+                          'english': f'{pns}:{pid} is an ontological parent '
+                                     f'of {ns}:{_id}',
+                          'z_score': 0, 'corr_weight': 1}
                     # Add non-existing nodes
                     if ed['agA_name'] not in indranet_graph.nodes:
                         indranet_graph.add_node(ed['agA_name'],
@@ -549,7 +733,8 @@ def sif_dump_df_to_digraph(df: Union[pd.DataFrame, str],
                                                     v,
                                                     belief=1.0,
                                                     weight=1.0,
-                                                    statements=[ed])
+                                                    statements=[ed],
+                                                    **z_sc_attrs)
 
         logger.info('Loaded %d entity relations into dataframe' % entities)
         indranet_graph.graph['node_by_uri'] = node_by_uri

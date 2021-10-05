@@ -1,16 +1,16 @@
 import argparse
 import logging
-from tqdm import tqdm
+from pathlib import Path
 from typing import Dict, Union
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from pathlib import Path
 from scipy.special import ndtri_exp
+from tqdm import tqdm
+
 from depmap_analysis.explainer import DepMapExplainer
 from depmap_analysis.post_processing.util import get_dir_iter
-
 from depmap_analysis.util.io_functions import is_dir_path, file_opener
 
 logger = logging.getLogger(__name__)
@@ -106,7 +106,7 @@ def main():
         ticks = [-1] + list(range(int(stats_norm.x_pos.values[1]),
                                   int(stats_norm.x_pos.max()) + 2, 2))
         ticks_labels = ['RND'] + [str(n) for n in ticks[1:]]
-        fdr_line = abs(ndtri_exp(np.log(0.05)) - np.log(2))
+        fdr_line = abs(ndtri_exp(np.log(0.05)) - np.log(2))  # <-- WRONG, fixme
         fdr_label = 'FDR=|ndtri_exp(ln(.05)-ln(2))|'
         plt.xticks(ticks=ticks, labels=ticks_labels)
         plt.xlabel('abs(z-score) lower bound')

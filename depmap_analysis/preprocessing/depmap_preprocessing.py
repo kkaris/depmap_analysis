@@ -1,14 +1,14 @@
-import logging
 import argparse
-from typing import Dict, Union, Optional
+import logging
 from pathlib import Path
+from typing import Dict, Union, Optional
 
 import numpy as np
 import pandas as pd
 
-from depmap_analysis.util import io_functions as io
 from depmap_analysis.network_functions.famplex_functions import ns_id_xref, \
     ns_id_to_name
+from depmap_analysis.util import io_functions as io
 from depmap_analysis.util.statistics import *
 
 logger = logging.getLogger(__name__)
@@ -333,7 +333,7 @@ def _merge_z_corr(zdf: pd.DataFrame, other_z_df: pd.DataFrame,
 def _z_scored_pvals(corr_df: pd.DataFrame, raw_df: pd.DataFrame,
                     method: str = 'beta', recalculate: bool = True,
                     file_path: Optional[str] = None) -> pd.DataFrame:
-    """
+    """Get z-scores from calculating the p-value for each correlation value
 
     Parameters
     ----------
