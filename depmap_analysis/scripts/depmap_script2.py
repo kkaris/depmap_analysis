@@ -48,13 +48,11 @@ from indra.util.multiprocessing_traceback import WrapException
 from indra_db.util.s3_path import S3Path
 from depmap_analysis.util.aws import get_s3_client
 from depmap_analysis.util.io_functions import file_opener, \
-    dump_it_to_pickle, allowed_types, file_path, strip_out_date
-from depmap_analysis.network_functions.net_functions import \
-    pybel_node_name_mapping
+    dump_it_to_pickle, allowed_types, file_path
 from depmap_analysis.network_functions.depmap_network_functions import \
-    corr_matrix_to_generator, get_pairs, get_chunk_size, down_sample_df
-from depmap_analysis.util.statistics import DepMapExplainer, min_columns, \
-    id_columns, expl_columns
+    get_pairs, get_chunk_size, corr_matrix_to_generator
+from depmap_analysis.explainer import min_columns, id_columns, expl_columns, \
+    DepMapExplainer
 from depmap_analysis.preprocessing import *
 from depmap_analysis.scripts.depmap_script_expl_funcs import *
 
@@ -70,7 +68,7 @@ hgnc_node_mapping: Dict[str, Set] = dict()
 output_list: List[Tuple[Dict[str, List], Dict[str, List]]] = []
 
 
-def _match_correlation_body(corr_iter: Generator[Tuple[str, str, float],
+def _match_correlation_body(corr_iter: Generator[Tuple[Tuple[str, str], float],
                                                  None, None],
                             expl_types: Dict[str, Callable],
                             stats_columns: Tuple[str],
@@ -117,7 +115,7 @@ def _match_correlation_body(corr_iter: Generator[Tuple[str, str, float],
             # Break loop when batch_iter reaches None padding
             if tup is None:
                 break
-            gA, gB, zsc = tup
+            (gA, gB), zsc = tup
             pair_key = f'{gA}_{gB}'
             # Initialize current iteration stats
             stats = {k: False for k in bool_columns}
@@ -215,7 +213,7 @@ def _match_correlation_body(corr_iter: Generator[Tuple[str, str, float],
 
 
 def match_correlations(corr_z: pd.DataFrame,
-                       sd_range: Tuple[float, Union[float, None]],
+                       sd_range: Tuple[float, Optional[float]],
                        script_settings: Dict[str, Union[str, int, float]],
                        graph_filepath: str,
                        z_corr_filepath: str,
@@ -229,9 +227,11 @@ def match_correlations(corr_z: pd.DataFrame,
                        indra_date: Optional[str] = None,
                        info: Optional[Dict[str, Any]] = None,
                        depmap_date: Optional[str] = None,
-                       n_chunks: Optional[int] = 8,
-                       immediate_only: Optional[bool] = False,
-                       return_unexplained: Optional[bool] = False,
+                       n_chunks: int = 8,
+                       max_pairs: Optional[int] = None,
+                       shuffle: bool = False,
+                       immediate_only: bool = False,
+                       return_unexplained: bool = False,
                        reactome_dict: Optional[Dict[str, Any]] = None,
                        subset_list: Optional[List[Union[str, int]]] = None):
     """The main loop for matching correlations with INDRA explanations
@@ -268,7 +268,7 @@ def match_correlations(corr_z: pd.DataFrame,
 
     Returns
     -------
-    depmap_analysis.util.statistics.DepMapExplainer
+    DepMapExplainer
         An instance of the DepMapExplainer class containing the explanations
         for the correlations.
     """
@@ -317,49 +317,72 @@ def match_correlations(corr_z: pd.DataFrame,
     ymd_now = datetime.now().strftime('%Y%m%d')
     indra_date = indra_date or ymd_now
     depmap_date = depmap_date or ymd_now
-
-    logger.info('Calculating number of pairs to check...')
-    estim_pairs = get_pairs(corr_z, subset_list=subset_list)
-    logger.info(f'Starting workers at {datetime.now().strftime("%H:%M:%S")} '
-                f'with about {estim_pairs} pairs to check')
     tstart = time()
 
-    with mp.Pool() as pool:
-        MAX_SUB = 512
-        n_sub = min(n_chunks, MAX_SUB)
-        chunksize = get_chunk_size(n_sub, estim_pairs)
+    # Set args for _match_correlation_body
+    match_args = (
+        expl_types,
+        stats_columns,
+        expl_cols,
+        bool_columns,
+        graph_type,
+        apriori_explained,
+        allowed_ns,
+        allowed_sources,
+        is_a_part_of,
+        immediate_only,
+        return_unexplained,
+        reactome_dict
+    )
 
-        # Pick one more so we don't do more than MAX_SUB
-        chunksize += 1 if n_sub == MAX_SUB else 0
-        chunk_iter = batch_iter(
-            iterator=corr_matrix_to_generator(corr_z, subset_list=subset_list),
-            batch_size=chunksize,
-            return_func=list
-        )
-        for chunk in chunk_iter:
-            pool.apply_async(func=_match_correlation_body,
-                             # args should match the args for func
-                             args=(
-                                 chunk,
-                                 expl_types,
-                                 stats_columns,
-                                 expl_cols,
-                                 bool_columns,
-                                 graph_type,
-                                 apriori_explained,
-                                 allowed_ns,
-                                 allowed_sources,
-                                 is_a_part_of,
-                                 immediate_only,
-                                 return_unexplained,
-                                 reactome_dict
-                             ),
-                             callback=success_callback,
-                             error_callback=error_callback)
+    # Only do multi processing if n_chunks == 1
+    if n_chunks > 1:
+        logger.info('Calculating number of pairs to check...')
+        if max_pairs is not None:
+            estim_pairs = max_pairs
+        else:
+            estim_pairs = get_pairs(corr_z, subset_list=subset_list)
+        logger.info(f'Starting workers at '
+                    f'{datetime.now().strftime("%H:%M:%S")} with '
+                    f'{estim_pairs} pairs to check')
 
-        logger.info('Done submitting work to pool workers')
-        pool.close()
-        pool.join()
+        with mp.Pool() as pool:
+            MAX_SUB = 512
+            n_sub = min(n_chunks, MAX_SUB)
+            chunksize = get_chunk_size(n_sub, estim_pairs)
+
+            # Pick one more so we don't do more than MAX_SUB
+            chunksize += 1 if n_sub == MAX_SUB else 0
+            chunk_iter = batch_iter(
+                iterator=corr_matrix_to_generator(z_corr=corr_z,
+                                                  subset_list=subset_list,
+                                                  max_pairs=max_pairs,
+                                                  shuffle=shuffle),
+                batch_size=chunksize,
+                return_func=list
+            )
+            for chunk in chunk_iter:
+                pool.apply_async(func=_match_correlation_body,
+                                 # args should match the args for func
+                                 # When updating, also update the single
+                                 # proc implementation
+                                 args=(
+                                     chunk,
+                                     *match_args
+                                 ),
+                                 callback=success_callback,
+                                 error_callback=error_callback)
+
+            logger.info('Done submitting work to pool workers')
+            pool.close()
+            pool.join()
+    else:
+        # Run single process
+        pair_gen = corr_matrix_to_generator(z_corr=corr_z,
+                                            subset_list=subset_list,
+                                            max_pairs=max_pairs,
+                                            shuffle=shuffle)
+        _single_proc_matching(pair_gen, *match_args)
 
     print(f'Execution time: {time() - tstart} seconds')
     print(f'Done at {datetime.now().strftime("%H:%M:%S")}')
@@ -389,6 +412,11 @@ def match_correlations(corr_z: pd.DataFrame,
     return explainer
 
 
+def _single_proc_matching(*corr_body_args):
+    res = _match_correlation_body(*corr_body_args)
+    output_list.append(res)
+
+
 def success_callback(res):
     logger.info('Appending a result')
     output_list.append(res)
@@ -400,8 +428,8 @@ def error_callback(err):
     logger.exception(err)
 
 
-def main(indra_net: str,
-         z_score: str,
+def main(indra_net: Union[str, nx.DiGraph, nx.MultiDiGraph],
+         z_score: Union[str, pd.DataFrame],
          outname: str,
          graph_type: str,
          sd_range: Tuple[float, Union[None, float]],
@@ -427,7 +455,9 @@ def main(indra_net: str,
          overwrite: Optional[bool] = False,
          normalize_names: Optional[bool] = False,
          argparse_dict: Optional[Dict[str, Union[str, float, int,
-                                                 List[str]]]] = None):
+                                                 List[str]]]] = None,
+         indra_net_path: Optional[str] = None,
+         z_score_path: Optional[str] = None):
     """Set up correlation matching of depmap data with an indranet graph
 
     Parameters
@@ -481,7 +511,8 @@ def main(indra_net: str,
         from HGNC symbols to pybel nodes in the pybel model
     n_chunks : Optional[int]
         How many chunks to split the data into in the multiprocessing part
-        of the script
+        of the script. If n_chunks == 1, the inner correlation matching is
+        done in a way that is more optimized for single process execution.
     is_a_part_of : Optional[Iterable]
         A set of identifiers to look for when applying the common parent
         explanation between a pair of correlating nodes.
@@ -503,11 +534,7 @@ def main(indra_net: str,
         explanation of why the entity is explained. To use the default
         MitoCarta 3.0 file, run the following code:
         >>> from depmap_analysis.scripts.depmap_script2 import mito_file
-        >>> from depmap_analysis.preprocessing import get_mitocarta_info
-        >>> apriori_mapping = get_mitocarta_info(mito_file)
-        then pass `apriori_mapping` as `apriori_explained` when calling this
-        function:
-        >>> main(apriori_explained=apriori_mapping, ...)
+        >>> main(apriori_explained=mito_file, ...)
     allowed_ns : Optional[List[str]]
         A list of allowed name spaces for explanations involving
         intermediary nodes. Default: Any namespace.
@@ -523,8 +550,9 @@ def main(indra_net: str,
         The date (usually a quarter e.g. 19Q4) the depmap data was published
         on depmap.org
     sample_size : Optional[int]
-        Number of correlation pairs to approximately get out of the
-        correlation matrix after down sampling it
+        Number of correlation pairs to get out of the correlation matrix. If
+        specified and below the maximum number of extractable pairs,
+        a random sample of size sample_size is picked.
     shuffle : Optional[bool]
         If True, shuffle the correlation matrix. This is good to do in case
         the input data have some sort of structure that could lead to large
@@ -537,10 +565,33 @@ def main(indra_net: str,
         are not found in the provided graph. Default: False.
     argparse_dict : Optional[Dict[str, Union[str, float, int, List[str]]]]
         Provide the argparse options from running this file as a script
+    indra_net_path:
+        Optionally provide the graph path if a graph was privded with indra_net
+    z_score_path:
+        Optionally provide the path to the z scored correlation if a
+        dataframe was provided with z_score
     """
+    outname = outname if outname.endswith('.pkl') else \
+        outname + '.pkl'
+    if not overwrite:
+        error_msg = f'File {str(outname)} already exists! Set ' \
+                    f'overwrite=True to overwrite.'
+        if outname.startswith('s3://'):
+            s3 = get_s3_client(unsigned=False)
+            if S3Path.from_string(outname).exists(s3):
+                raise FileExistsError(error_msg)
+        elif Path(outname).is_file():
+            raise FileExistsError(error_msg)
+
     global indranet, hgnc_node_mapping, output_list
-    indranet = file_opener(indra_net)
+    if isinstance(indra_net, str):
+        indranet = file_opener(indra_net)
+    else:
+        indranet = indra_net
     assert isinstance(indranet, nx.DiGraph)
+
+    graph_path: str = indra_net if isinstance(indra_net, str) else (
+        indra_net_path if indra_net_path else '(unknown)')
 
     assert expl_funcs is None or isinstance(expl_funcs, (list, tuple, set))
 
@@ -578,27 +629,24 @@ def main(indra_net: str,
         logger.info(f'Using explained set with '
                     f'{len(apriori_explained)} entities')
 
-    outname = outname if outname.endswith('.pkl') else \
-        outname + '.pkl'
-    if not overwrite:
-        if outname.startswith('s3://'):
-            s3 = get_s3_client(unsigned=False)
-            if S3Path.from_string(outname).exists(s3):
-                raise FileExistsError(f'File {str(outname)} already exists!')
-        elif Path(outname).is_file():
-            raise FileExistsError(f'File {str(outname)} already exists!')
-
-    if z_score is not None and Path(z_score).is_file():
-        z_corr = pd.read_hdf(z_score)
+    if z_score is not None:
+        if isinstance(z_score, str):
+            z_corr = pd.read_hdf(z_score)
+        else:
+            z_corr = z_score
+            assert isinstance(z_corr, pd.DataFrame)
     else:
         z_sc_options = {
             'crispr_raw': raw_data[0],
             'rnai_raw': raw_data[1],
             'crispr_corr': raw_corr[0],
             'rnai_corr': raw_corr[1],
-            'z_corr_path': z_score
+            'z_corr_path': z_score if isinstance(z_score, str) else None
         }
         z_corr = run_corr_merge(**z_sc_options)
+
+    z_path: str = z_score if isinstance(z_score, str) else \
+        (z_score_path if z_score_path else '(unknown)')
 
     if reactome_path:
         up2path, _, pathid2pathname = file_opener(reactome_path)
@@ -619,37 +667,24 @@ def main(indra_net: str,
 
     # 2. Filter to SD range OR run random sampling
     if random:
-        logger.info('Doing random sampling through df.sample')
-        z_corr = z_corr.sample(142, axis=0)
-        z_corr = z_corr.filter(list(z_corr.index), axis=1)
-        # Remove correlation values to not confuse with real data
-        z_corr.loc[:, :] = 0
+        sample_size = 50000
+        logger.info(f'Doing random sampling with {sample_size} pairs')
+        z_filt = z_corr
     else:
-        if sd_l and sd_u:
+        if isinstance(sd_l, (int, float)) and isinstance(sd_u, (int, float)):
             logger.info(f'Filtering correlations to {sd_l} - {sd_u} SD')
-            z_corr = z_corr[((z_corr > sd_l) & (z_corr < sd_u)) |
-                            ((z_corr < -sd_l) & (z_corr > -sd_u))]
-        elif isinstance(sd_l, (int, float)) and sd_l and not sd_u:
+            z_filt = z_corr[((z_corr.abs() > sd_l) & (z_corr.abs() < sd_u))]
+        elif isinstance(sd_l, (int, float)) and sd_u is None:
             logger.info(f'Filtering correlations to {sd_l}+ SD')
-            z_corr = z_corr[(z_corr > sd_l) | (z_corr < -sd_l)]
+            z_filt = z_corr[z_corr.abs() > sd_l]
+        else:
+            raise ValueError('Check SD ranges')
 
     sd_range = (sd_l, sd_u) if sd_u else (sd_l, None)
 
-    # Pick a sample
-    if sample_size is not None and not random:
-        logger.info(f'Reducing correlation matrix to a random approximately '
-                    f'{sample_size} correlation pairs.')
-        z_corr = down_sample_df(z_corr, sample_size)
-
-    # Shuffle corr matrix without removing items
-    elif shuffle and not random:
-        logger.info('Shuffling correlation matrix...')
-        z_corr = z_corr.sample(frac=1, axis=0)
-        z_corr = z_corr.filter(list(z_corr.index), axis=1)
-
     if normalize_names:
         logger.info('Normalizing correlation matrix column names')
-        z_corr = normalize_corr_names(z_corr, indranet)
+        z_filt = normalize_corr_names(z_filt, indranet)
     else:
         logger.info('Leaving correlation matrix column names as is')
 
@@ -662,9 +697,9 @@ def main(indra_net: str,
     script_settings = {
         'raw_data': raw_data,
         'raw_corr': raw_corr,
-        'z_score': z_score,
+        'z_score': z_path,
         'random': random,
-        'indranet': indra_net,
+        'indranet': graph_path,
         'shuffle': shuffle,
         'sample_size': sample_size,
         'n_chunks': n_chunks,
@@ -680,11 +715,11 @@ def main(indra_net: str,
     # Create output list in global scope
     output_list = []
     explanations = match_correlations(
-        corr_z=z_corr,
+        corr_z=z_filt,
         sd_range=sd_range,
         script_settings=script_settings,
-        graph_filepath=indra_net,
-        z_corr_filepath=z_score,
+        graph_filepath=graph_path,
+        z_corr_filepath=z_path,
         apriori_explained=apriori_explained,
         graph_type=graph_type,
         allowed_ns=allowed_ns,
@@ -696,6 +731,8 @@ def main(indra_net: str,
         info=info_dict,
         depmap_date=depmap_date,
         n_chunks=n_chunks,
+        max_pairs=sample_size,
+        shuffle=shuffle,
         immediate_only=immediate_only,
         return_unexplained=return_unexplained,
         reactome_dict=reactome_dict,
@@ -729,7 +766,8 @@ def main(indra_net: str,
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser('DepMap Explainer main script')
+    parser = argparse.ArgumentParser('DepMap Explainer main script',
+                                     fromfile_prefix_chars='@')
     #   1a Load depmap data from scratch | load crispr/rnai raw corr | z-score
     corr_group = parser.add_mutually_exclusive_group(required=True)
     range_group = parser.add_mutually_exclusive_group(required=True)
@@ -787,7 +825,8 @@ if __name__ == '__main__':
     parser.add_argument(
         '--graph-type', type=allowed_types(allowed_graph_types),
         default='unsigned',
-        help=f'Specify the graph type used. Allowed values are {allowed_types}'
+        help=f'Specify the graph type used. Allowed values are '
+             f'{allowed_graph_types}'
     )
 
     #   1e Provide allowed_ns
@@ -809,8 +848,9 @@ if __name__ == '__main__':
     parser.add_argument(
         '--expl-funcs', nargs='+',
         type=allowed_types(set(expl_functions.keys())),
-        help='Provide explainer function names to be used in the explanation '
-             'loop'
+        help=f'Provide explainer function names to be used in the explanation '
+             f'loop. Allowed explanation functions are '
+             f'{set(expl_functions.keys())}.'
     )
 
     #   2a. Filter to SD range
@@ -844,7 +884,9 @@ if __name__ == '__main__':
     parser.add_argument(
         '--n-chunks', type=int, default=8,
         help='Pick the number of slices to split the work into. Does not '
-             'have to be equal to the amount of CPUs.'
+             'have to be equal to the amount of CPUs. If set to 1, '
+             'the correlation matching code is run optimized for a single '
+             'process.'
     )
 
     # Sampling

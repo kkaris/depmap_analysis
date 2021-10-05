@@ -6,7 +6,7 @@ import logging
 import itertools as itt
 from random import choices
 from math import ceil, log10
-from typing import Iterable, Optional, List, Union
+from typing import Iterable, Optional, List, Union, Generator, Iterator
 from collections import Mapping, OrderedDict, defaultdict
 
 import numpy as np
@@ -18,6 +18,7 @@ from scipy import interpolate as interpol
 from scipy.optimize import curve_fit as opt_curve_fit
 from pandas.core.series import Series as pd_Series_class
 
+from indra_db.exceptions import IndraDbException
 from indra_db import util as dbu
 from indra_db import client as dbc
 from indra.tools import assemble_corpus as ac
@@ -27,9 +28,16 @@ from indra.sources.indra_db_rest.exceptions import IndraDBRestAPIError
 import depmap_analysis.util.io_functions as io
 import depmap_analysis.network_functions.famplex_functions as ff
 
-db_prim = dbu.get_primary_db()
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+
+try:
+    db_prim = dbu.get_primary_db()
+except IndraDbException:
+    db_prim = None
+    logger.warning('Database is not available')
 
 
 def entry_exist_dict(nest_dict, outer_key, inner_key):
@@ -128,52 +136,57 @@ def csv_file_to_generator(fname, column_list):
 
 def corr_matrix_to_generator(z_corr: pd.DataFrame,
                              max_pairs: Optional[int] = None,
-                             subset_list: List[Union[str, int]] = None):
+                             subset_list: Optional[List[str]] = None,
+                             shuffle: bool = False) \
+        -> Union[Generator, Iterator]:
     """Return a tuple generator given a correlation matrix
-    
-    The function takes a correlation matrix and returns a consumable tuple 
-    generator object. Once consumed, the object is exhausted and a new
-    generator needs to be produced.
 
     correlation_df_matrix : pd.DataFrame
         A correlation matrix as a pandas dataframe
     max_pairs : Optional[int]
-        The maximum number of pairs to yield
+        The maximum number of pairs to yield. If specified, also shuffles the
+        correlation matrix to yield pairs at random.
     subset_list : Optional[List[str]]
         If provided, get the first of the pair from this list of entities
         under the assumption that the entities also exist in
         correlation_df_matrix
+    shuffle : bool
+        If True, shuffle the correlation matrix
 
     Returns
     -------
     tuple_generator : generator object
         A generator that returns a tuple of each row
     """
-    if max_pairs:
-        # Sample at random: the matrix is shuffled and we can therefore pick
-        # values "in order" since the order is random and then stop after
-        # max_pairs pairs have been yielded
-        logger.info('Shuffling correlation matrix...')
-        z_corr = z_corr.sample(frac=1, axis=0)
-        z_corr = z_corr.filter(list(z_corr.index), axis=1)
+
+    def _matrix_to_stack_gen(
+            corr_z: pd.DataFrame,
+            sample: bool = False
+    ) -> Union[Iterable, Generator]:
+        z_ut = corr_z.where(
+            np.triu(np.ones(corr_z.shape), k=1).astype(np.bool))
+        stacked: pd.DataFrame = z_ut.stack(dropna=True)
+        if sample:
+            rnd_indices = stacked.index.values
+            np.random.shuffle(rnd_indices)
+            return (((a, b), stacked[a, b]) for a, b in rnd_indices)
+        else:
+            return stacked.iteritems()
 
     if subset_list is not None:
-        pair_iter = ((a, b) for a, b in
+        # Fixme: figure out way to do rectangular data with helper
+        pair_iter = (((a, b), z_corr.iloc[a, b]) for a, b in
                      itt.product(subset_list, z_corr.columns.values)
-                     if a in z_corr.columns and a != b)
+                     if a in z_corr.columns and a != b and
+                     not np.isnan(z_corr.iloc[a, b]))
     else:
-        tr_up_indices = np.triu_indices(n=z_corr.shape[0], k=1)
-        names = z_corr.columns.values
-        pair_iter = ((names[i], names[j]) for i, j in zip(*tr_up_indices))
+        rand = shuffle or (max_pairs is not None and max_pairs > 0)
+        pair_iter = _matrix_to_stack_gen(z_corr, sample=rand)
 
-    yielded_pairs = 0
-    for a, b in pair_iter:
-        if max_pairs and yielded_pairs >= max_pairs:
-            raise StopIteration
-
-        if not np.isnan(z_corr.loc[a, b]):
-            yield a, b, z_corr.loc[a, b]
-            yielded_pairs += 1
+    if max_pairs:
+        return itt.islice(pair_iter, max_pairs)
+    else:
+        return pair_iter
 
 
 def _dump_master_corr_dict_to_pairs_in_csv(fname, nest_dict):
