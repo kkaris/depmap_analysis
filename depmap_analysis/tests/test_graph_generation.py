@@ -1,11 +1,12 @@
-from networkx import DiGraph, MultiDiGraph
 from datetime import datetime
-from typing import Tuple
+
 import pandas as pd
-from indra.assemblers.indranet.net import default_sign_dict
+from networkx import DiGraph, MultiDiGraph
+
 from depmap_analysis.network_functions.net_functions import \
-    sif_dump_df_to_digraph, NP_PRECISION
+    sif_dump_df_to_digraph, MIN_WEIGHT
 from depmap_analysis.tests import _gen_sym_df
+from indra.assemblers.indranet.net import default_sign_dict
 
 # Add input
 agA_names = ['nameX1', 'nameX2']
@@ -72,8 +73,8 @@ def test_ontological_edges():
             assert sd['source_counts'] == {'fplx': 1}
             assert sd['belief'] == 1.0
             assert sd['curated']
-            assert sd['weight'] == NP_PRECISION, \
-                f'weight={sd["weight"]}, NP_PRECISION={NP_PRECISION}'
+            assert sd['weight'] == MIN_WEIGHT, \
+                f'weight={sd["weight"]}, MIN_WEIGHT={MIN_WEIGHT}'
             assert 'stmt_hash' in sd
             assert 'curated' in sd
             tested = True
