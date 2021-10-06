@@ -39,6 +39,7 @@ from indra.statements import Agent, get_statement_by_name, get_all_descendants
 logger = logging.getLogger(__name__)
 
 NP_PRECISION = 10 ** -np.finfo(np.longfloat).precision  # Numpy precision
+MIN_WEIGHT = 10 * NP_PRECISION  # Set min weight to 10x precision
 INT_PLUS = 0
 INT_MINUS = 1
 SIGN_TO_STANDARD = {INT_PLUS: '+', '+': '+', 'plus': '+',
@@ -103,7 +104,7 @@ def _weight_from_belief(belief):
     """Map belief score 'belief' to weight. If the calculation goes below
     precision, return longfloat precision instead to avoid making the
     weight zero."""
-    return np.max([NP_PRECISION, -np.log(belief, dtype=np.longfloat)])
+    return np.max([MIN_WEIGHT, -np.log(belief, dtype=np.longfloat)])
 
 
 def _weight_mapping(G, verbosity=0):
@@ -129,13 +130,13 @@ def _weight_mapping(G, verbosity=0):
                                '%s. Resetting ag_belief to 10*np.longfloat '
                                'precision (%.0e)' %
                                (G.edges[edge]['belief'],
-                                Decimal(NP_PRECISION * 10)))
+                                Decimal(MIN_WEIGHT)))
                 if verbosity == 1:
                     logger.error('Error string: %s' % err)
                 elif verbosity > 1:
                     logger.error('Exception output follows:')
                     logger.exception(err)
-                G.edges[edge]['weight'] = NP_PRECISION
+                G.edges[edge]['weight'] = MIN_WEIGHT
     return G
 
 
@@ -702,7 +703,7 @@ def sif_dump_df_to_digraph(df: Union[pd.DataFrame, str],
                           'agB_name': pnode, 'agB_ns': pns, 'agB_id': pid,
                           'stmt_type': 'fplx', 'evidence_count': 1,
                           'source_counts': {'fplx': 1}, 'stmt_hash': puri,
-                          'belief': 1.0, 'weight': NP_PRECISION,
+                          'belief': 1.0, 'weight': MIN_WEIGHT,
                           'curated': True,
                           'english': f'{pns}:{pid} is an ontological parent '
                                      f'of {ns}:{_id}',
@@ -1000,8 +1001,8 @@ def ag_belief_score(belief_list):
         except FloatingPointError as err:
             logger.warning('%s: Resetting ag_belief to 10*np.longfloat '
                            'precision (%.0e)' %
-                           (err, Decimal(NP_PRECISION * 10)))
-            ag_belief = NP_PRECISION * 10
+                           (err, Decimal(MIN_WEIGHT)))
+            ag_belief = MIN_WEIGHT
 
     return ag_belief
 
