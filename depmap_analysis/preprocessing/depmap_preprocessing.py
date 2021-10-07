@@ -277,8 +277,9 @@ def _get_corrs(crispr_raw: Optional[PathObj], rnai_raw: Optional[PathObj],
     rnai_raw_df = _get_raw(rnai_raw)
 
     # Check if we need to transpose the df
-    if len(set(crispr_corr_df.columns.values) &
-           set([n.split()[0] for n in rnai_raw_df.columns])) == 0:
+    if rnai_raw is not None and \
+            len(set(crispr_corr_df.columns.values) &
+                set([n.split()[0] for n in rnai_raw_df.columns])) == 0:
         logger.info('Transposing RNAi raw data dataframe...')
         rnai_raw_df = rnai_raw_df.T
 
@@ -324,8 +325,7 @@ def _merge_z_corr(zdf: pd.DataFrame, other_z_df: pd.DataFrame,
 
     if remove_self_corr:
         # Assumes the max correlation ONLY occurs on the diagonal
-        self_corr_value = dep_z.loc[dep_z.columns[0], dep_z.columns[0]]
-        dep_z = dep_z[dep_z != self_corr_value]
+        np.fill_diagonal(a=dep_z.values, val=np.nan)
     assert dep_z.notna().sum().sum() > 0, 'Correlation matrix is empty!'
     return dep_z
 
