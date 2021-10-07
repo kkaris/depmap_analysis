@@ -39,7 +39,7 @@ from indra.statements import Agent, get_statement_by_name, get_all_descendants
 logger = logging.getLogger(__name__)
 
 NP_PRECISION = 10 ** -np.finfo(np.longfloat).precision  # Numpy precision
-MIN_WEIGHT = 10 * NP_PRECISION  # Set min weight to 10x precision
+MIN_WEIGHT = np.longlong(1e-12)  # Set min weight to 10x precision
 INT_PLUS = 0
 INT_MINUS = 1
 SIGN_TO_STANDARD = {INT_PLUS: '+', '+': '+', 'plus': '+',
