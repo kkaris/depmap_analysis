@@ -141,25 +141,10 @@ def get_n(recalculate: bool, data_df: pd.DataFrame,
     start = time()
     if recalculate or filepath is None:
         logger.info('Calculating sampling values')
-        num_cols = data_df.shape[1]
-        data_mat = data_df._get_numeric_data().to_numpy(dtype=float,
-                                                        na_value=np.nan,
-                                                        copy=False)
-        n_mat = np.zeros((num_cols, num_cols))
-        group_start = time()
-        for a_ix in range(num_cols):
-            if a_ix % 100 == 0:
-                print(a_ix, '%.2f' % (time() - group_start), 'sec per round,',
-                      int(time() - start), 'sec total')
-                group_start = time()
-            n_mat[a_ix, a_ix] = (~np.isnan(data_mat[:, a_ix])).sum()
-            for b_ix in range(a_ix + 1, num_cols):
-                n = (~np.isnan(data_mat[:, a_ix]) &
-                     ~np.isnan(data_mat[:, b_ix])).sum()
-                n_mat[a_ix, b_ix] = n
-                n_mat[b_ix, a_ix] = n
-        data_n = pd.DataFrame(n_mat, index=data_df.columns,
-                              columns=data_df.columns)
+        data_mat = data_df.copy()
+        data_mat[~pd.isna(data_mat)] = 1
+        data_mat[pd.isna(data_mat)] = 0
+        data_n = data_mat.transpose().dot(data_mat)
         if filepath is not None:
             logger.info(f'Saving sampling matrix to {"%s.h5" % filepath}')
             data_n.to_hdf('%s.h5' % filepath, filepath.split('/')[-1])
