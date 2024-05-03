@@ -5,7 +5,7 @@ import argparse
 from typing import Optional
 
 import depmap_analysis.network_functions.net_functions as nf
-from depmap_analysis.util.io_functions import file_path
+from depmap_analysis.util.io_functions import file_path, file_opener
 from depmap_analysis.util.aws import get_latest_sif_s3, dump_pickle_to_s3, NETS_PREFIX
 
 
@@ -42,7 +42,7 @@ def dump_new_nets(
 
     if corr_path:
         logger.info(f"Loading z-score dataframe from {corr_path}")
-        corr_df = pd.read_hdf(corr_path)
+        corr_df = file_opener(corr_path)
         options["z_sc_path"] = corr_df
 
     if add_mesh_ids:
