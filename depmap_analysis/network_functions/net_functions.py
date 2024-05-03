@@ -393,7 +393,8 @@ def add_corr_to_edges(graph: DiGraph, z_corr: pd.DataFrame,
     for u, v, data in tqdm(graph.edges(data=True)):
         un = u[0] if isinstance(u, tuple) else u
         vn = v[0] if isinstance(v, tuple) else v
-        if un in z_corr and vn in z_corr and not np.isnan(z_corr.loc[un, vn]):
+        z_sc = z_corr.loc[un, vn]
+        if un in z_corr and vn in z_corr and not np.isnan(z_sc) and not np.isinf(z_sc):
             z_sc = z_corr.loc[un, vn]
             data['z_score'] = round(z_sc, 4)
             data['corr_weight'] = round(z_sc_weight(z_sc, self_corr), 4)
