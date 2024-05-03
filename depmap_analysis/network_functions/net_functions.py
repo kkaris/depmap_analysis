@@ -35,6 +35,7 @@ from indra.explanation.model_checker.model_checker import \
 from indra.explanation.pathfinding import bfs_search
 from indra.ontology.bio import bio_ontology
 from indra.statements import Agent, get_statement_by_name, get_all_descendants
+from indra.util.statement_presentation import reader_sources
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +58,7 @@ GraphTypes = Literal['digraph', 'multidigraph', 'signed', 'signed-expanded',
 
 # FixMe use the "readers" vs db from indra_db, where is it?
 READERS = {'reach', 'trips', 'isi', 'sparser', 'medscan', 'rlimsp', 'eidos',
-           'cwms', 'geneways', 'tees', 'hume', 'sofia'}
+           'cwms', 'geneways', 'tees', 'hume', 'sofia'}.update(reader_sources)
 
 
 def _get_smallest_belief_prior():
