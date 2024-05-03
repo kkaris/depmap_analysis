@@ -394,8 +394,12 @@ def add_corr_to_edges(graph: DiGraph, z_corr: pd.DataFrame,
     )
     z_sc_values = z_corr.values
     z_sc_max = np.max(
-        np.nanmax(z_sc_values[z_sc_values != np.inf]),
-        np.abs(np.nanmin(z_sc_values[z_sc_values != -np.inf]))
+        [
+            np.nanmax(z_sc_values[(z_sc_values != np.inf) & (z_sc_values != self_corr)]),
+            np.abs(np.nanmin(
+                z_sc_values[(z_sc_values != -np.inf) & (z_sc_values != self_corr)]
+            ))
+        ]
     )
     for u, v, data in tqdm(graph.edges(data=True)):
         un = u[0] if isinstance(u, tuple) else u
