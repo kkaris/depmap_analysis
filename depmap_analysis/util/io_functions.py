@@ -34,6 +34,9 @@ def file_opener(fname: str, **kwargs) -> Union[object, pd.DataFrame, Dict]:
     ----------
     fname : str
         The filename. If an s3 url, load object directly from s3.
+    **kwargs
+        Additional keyword arguments for s3_file_opener, pd.read_csv() and
+        pd.read_hdf()
 
     Returns
     -------
