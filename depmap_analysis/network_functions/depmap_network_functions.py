@@ -6,8 +6,8 @@ import logging
 import itertools as itt
 from random import choices
 from math import ceil, log10
-from typing import Iterable, Optional, List, Union, Generator, Iterator
-from collections import Mapping, OrderedDict, defaultdict
+from typing import Iterable, Optional, List, Union, Generator, Iterator, Mapping
+from collections import OrderedDict, defaultdict
 
 import numpy as np
 import pandas as pd
