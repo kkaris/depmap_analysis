@@ -19,7 +19,7 @@ from scipy.optimize import curve_fit as opt_curve_fit
 from pandas.core.series import Series as pd_Series_class
 
 from indra_db.exceptions import IndraDbException
-from indra_db import util as dbu
+from indra_db import get_db
 from indra_db import client as dbc
 from indra.tools import assemble_corpus as ac
 from indra.statements import Statement
@@ -34,9 +34,9 @@ logger.setLevel(logging.DEBUG)
 
 
 try:
-    db_prim = dbu.get_primary_db()
+    db = get_db('primary')
 except IndraDbException:
-    db_prim = None
+    db = None
     logger.warning('Database is not available')
 
 
@@ -1914,7 +1914,7 @@ def dbc_load_statements(hgnc_syms):
     try:
         for hgnc_id in hgnc_syms:
             stmts.update(dbc.get_statements_by_gene_role_type(agent_id=hgnc_id,
-                                                              db=db_prim,
+                                                              db=db,
                                                               preassembled=
                                                               False,
                                                               fix_refs=False))
@@ -1924,10 +1924,10 @@ def dbc_load_statements(hgnc_syms):
                                 ': : :' % (counter, n_hgnc_ids))
 
     except KeyboardInterrupt as e:
-        db_prim.session.rollback()
+        db.session.rollback()
         raise e
     except StatementError as e:
-        db_prim.session.rollback()
+        db.session.rollback()
         raise e
     return stmts
 
