@@ -3,6 +3,7 @@ from typing import Dict, Callable
 import numpy as np
 import pandas as pd
 import networkx as nx
+import pytest
 
 from indra.util import batch_iter
 from indra.databases.hgnc_client import uniprot_ids, hgnc_names
@@ -220,6 +221,8 @@ def test_sampling():
         f'chunk_ix+1={chunk_ix + 1}, chunks_wanted={chunks_wanted}'
 
 
+# todo: create a mock for reactome_pathways.pkl or create an AWS role for GH actions
+@pytest.mark.nogha
 def test_depmap_script():
     up2path, _, pathid2pathname = file_opener(
         's3://depmap-analysis/misc_files/reactome_pathways.pkl')
@@ -344,6 +347,8 @@ def test_depmap_script():
     assert set(interesting_df.pair) == {'X1_X2', 'Y1_Z2', 'Y2_Z2', 'Z1_Z2'}
 
 
+# todo: create a mock for reactome_pathways.pkl or create an AWS role for GH actions
+@pytest.mark.nogha
 def test_reactome_expl():
     up2path, _, pathid2pathname = file_opener(
         's3://depmap-analysis/misc_files/reactome_pathways.pkl')
