@@ -7,7 +7,11 @@ import itertools as itt
 from random import choices
 from math import ceil, log10
 from typing import Iterable, Optional, List, Union, Generator, Iterator
-from collections import Mapping, OrderedDict, defaultdict
+from collections import OrderedDict, defaultdict
+try:
+    from collections import Mapping
+except ImportError:
+    from collections.abc import Mapping
 
 import numpy as np
 import pandas as pd
