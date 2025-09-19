@@ -168,7 +168,7 @@ def corr_matrix_to_generator(z_corr: pd.DataFrame,
             sample: bool = False
     ) -> Union[Iterable, Generator]:
         z_ut = corr_z.where(
-            np.triu(np.ones(corr_z.shape), k=1).astype(np.bool))
+            np.triu(np.ones(corr_z.shape), k=1).astype(np.bool_))
         stacked: pd.DataFrame = z_ut.stack(dropna=True)
         if sample:
             rnd_indices = stacked.index.values
