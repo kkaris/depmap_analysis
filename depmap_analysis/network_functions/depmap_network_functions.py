@@ -175,7 +175,7 @@ def corr_matrix_to_generator(z_corr: pd.DataFrame,
             np.random.shuffle(rnd_indices)
             return (((a, b), stacked[a, b]) for a, b in rnd_indices)
         else:
-            return stacked.iteritems()
+            return stacked.items()
 
     if subset_list is not None:
         # Fixme: figure out way to do rectangular data with helper
