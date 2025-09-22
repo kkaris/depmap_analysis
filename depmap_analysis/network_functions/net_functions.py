@@ -104,7 +104,7 @@ def _weight_from_belief(belief):
     """Map belief score 'belief' to weight. If the calculation goes below
     precision, return longfloat precision instead to avoid making the
     weight zero."""
-    return np.max([MIN_WEIGHT, -np.log(belief, dtype=np.longfloat)])
+    return np.max([MIN_WEIGHT, -np.log(belief)])
 
 
 def _weight_mapping(G, verbosity=0):
@@ -370,7 +370,7 @@ def add_corr_to_edges(graph: DiGraph, z_corr: pd.DataFrame,
     z_corr :
         A square dataframe with all correlations
     self_corr_value :
-        If provided, set this value as self corr value. Default: value of 
+        If provided, set this value as self corr value. Default: value of
         first non-NaN value on the diagonal.
     """
     logger.info('Setting z-scores and z-score weights to graph edges')
@@ -509,7 +509,7 @@ def sif_dump_df_to_digraph(df: Union[pd.DataFrame, str],
     date : str
         A date string specifying when the data was dumped from the database.
     mesh_id_dict : dict
-        A dict object mapping statement hashes to all mesh ids sharing a 
+        A dict object mapping statement hashes to all mesh ids sharing a
         common PMID
     graph_type : str
         Return type for the returned graph. Currently supports:
