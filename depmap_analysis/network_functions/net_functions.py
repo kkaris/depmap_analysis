@@ -228,7 +228,7 @@ def expand_signed(df: pd.DataFrame, sign_dict: Dict[str, int],
 
     logger.info('Appending extended signed rows')
     extra_df = pd.DataFrame(add_rows, columns=df.columns.values)
-    df = df.append(extra_df)
+    df = pd.concat([df, extra_df], ignore_index=True)
 
     # Remove all rows without assigned sign
     logger.info('Removing rows without signed')

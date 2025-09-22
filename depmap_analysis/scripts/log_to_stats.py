@@ -179,7 +179,7 @@ if __name__ == '__main__':
             logger.info(f'Processing {summary_file}')
             metrics = process_summary_file(summary_file)
             metrics['range'] = [d.upper()]
-            df = df.append(other=pd.DataFrame(data=metrics))
+            df = pd.concat([df, pd.DataFrame(data=metrics)], ignore_index=True)
         else:
             logger.warning(f'{summary_file} is not a file!')
             continue

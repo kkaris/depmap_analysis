@@ -404,8 +404,9 @@ def match_correlations(corr_z: pd.DataFrame,
     logger.info(f'Generating DepMapExplainer with output from '
                 f'{len(output_list)} results')
     for stats_dict, expl_dict in output_list:
-        explainer.stats_df = explainer.stats_df.append(other=pd.DataFrame(
-            data=stats_dict))
+        explainer.stats_df = pd.concat(
+            [explainer.stats_df, pd.DataFrame(data=stats_dict)]
+        )
         explainer.expl_df = explainer.expl_df.append(other=pd.DataFrame(
             data=expl_dict))
 
