@@ -104,7 +104,7 @@ def _weight_from_belief(belief):
     """Map belief score 'belief' to weight. If the calculation goes below
     precision, return longfloat precision instead to avoid making the
     weight zero."""
-    return np.max([MIN_WEIGHT, -np.log(belief)])
+    return float(max([MIN_WEIGHT, -np.log(belief)]))
 
 
 def _weight_mapping(G, verbosity=0):
