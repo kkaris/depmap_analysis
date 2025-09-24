@@ -91,9 +91,10 @@ def main():
         )
 
         for data in list_of_expl_data:
-            stats_norm = stats_norm.append(other=pd.DataFrame(data=data,
-                                                              index=[0]),
-                                           sort=False)
+            stats_norm = pd.concat(
+                [stats_norm, pd.DataFrame(data=data, index=[0])],
+                ignore_index=True
+            )
         stats_norm.sort_values('x_pos', inplace=True)
 
         # Plot

@@ -7,7 +7,11 @@ import itertools as itt
 from random import choices
 from math import ceil, log10
 from typing import Iterable, Optional, List, Union, Generator, Iterator
-from collections import Mapping, OrderedDict, defaultdict
+from collections import OrderedDict, defaultdict
+try:
+    from collections import Mapping
+except ImportError:
+    from collections.abc import Mapping
 
 import numpy as np
 import pandas as pd
@@ -164,14 +168,14 @@ def corr_matrix_to_generator(z_corr: pd.DataFrame,
             sample: bool = False
     ) -> Union[Iterable, Generator]:
         z_ut = corr_z.where(
-            np.triu(np.ones(corr_z.shape), k=1).astype(np.bool))
+            np.triu(np.ones(corr_z.shape), k=1).astype(np.bool_))
         stacked: pd.DataFrame = z_ut.stack(dropna=True)
         if sample:
             rnd_indices = stacked.index.values
             np.random.shuffle(rnd_indices)
             return (((a, b), stacked[a, b]) for a, b in rnd_indices)
         else:
-            return stacked.iteritems()
+            return stacked.items()
 
     if subset_list is not None:
         # Fixme: figure out way to do rectangular data with helper
